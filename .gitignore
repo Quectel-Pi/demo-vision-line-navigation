@@ -1,0 +1,37 @@
+# Python environments and caches
+.venv/
+.venv-linux/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local evidence and development-only material
+/test_records/
+/tests/
+/reference/
+/logs/
+/run-data/
+/开发归档/
+/docs/.build/
+/docs/飞书文档/
+/飞书文档/
+**/.build/
+*.log
+*.tar
+*.tar.gz
+*.zip
+
+# Editor files and local credentials
+.vscode/
+.idea/
+.DS_Store
+.env
+.env.*
+*.pem
+*.key
+*.p12

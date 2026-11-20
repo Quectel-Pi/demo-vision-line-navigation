@@ -1,0 +1,117 @@
+{
+  "_comment": "Only enter coordinates measured on the real floor. Points are image [x_px,y_px] and chassis-plane [x_m,y_m] from the front-edge centre; +X is right and +Y is forward. Empty points keep metric output disabled.",
+  "schema_version": 1,
+  "enabled": true,
+  "reference_resolution": {
+    "width": 640,
+    "height": 480
+  },
+  "camera_pose_pwm_us": {
+    "pan": 1388,
+    "tilt": 1944
+  },
+  "image_points_px": [
+    [
+      47.352941,
+      365.58657
+    ],
+    [
+      297.024518,
+      343.37427
+    ],
+    [
+      568.704608,
+      309.954561
+    ],
+    [
+      104.854763,
+      228.913275
+    ],
+    [
+      297.319256,
+      212.076034
+    ],
+    [
+      575.638273,
+      190.409578
+    ],
+    [
+      170.124414,
+      430.437726
+    ],
+    [
+      470.846985,
+      397.510964
+    ],
+    [
+      258.533691,
+      121.88357
+    ],
+    [
+      345.254438,
+      119.077387
+    ]
+  ],
+  "ground_points_m": [
+    [
+      -0.05,
+      0.08
+    ],
+    [
+      0.0,
+      0.08
+    ],
+    [
+      0.06,
+      0.08
+    ],
+    [
+      -0.05,
+      0.125
+    ],
+    [
+      0.0,
+      0.125
+    ],
+    [
+      0.085,
+      0.125
+    ],
+    [
+      -0.03,
+      0.065
+    ],
+    [
+      0.03,
+      0.065
+    ],
+    [
+      -0.01,
+      0.19
+    ],
+    [
+      0.02,
+      0.19
+    ]
+  ],
+  "row_distance_samples": [
+    {
+      "row_px": 212.076034,
+      "distance_m": 0.125
+    },
+    {
+      "row_px": 343.37427,
+      "distance_m": 0.08
+    }
+  ],
+  "min_path_confidence": 0.65,
+  "max_fit_rms_m": null,
+  "max_extrapolation_m": 0.0,
+  "collected_utc": "2026-11-18T08:22:08.262597+00:00",
+  "measurement_note": "Tape measurements are approximate. Ten-point leave-one-out error reached 7.54 mm in this capture.",
+  "validation": {
+    "fit_rms_mm": 2.55,
+    "leave_one_out_max_mm": 7.54,
+    "independent_accuracy_verified": false
+  }
+}

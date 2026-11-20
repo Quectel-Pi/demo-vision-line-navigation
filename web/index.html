@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>视觉循迹小车 · 调试台</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, "Microsoft YaHei", sans-serif; background: #10151d; color: #e8edf5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    header { padding: 18px clamp(16px, 4vw, 36px); border-bottom: 1px solid #293241; background: #151c26; }
+    h1 { margin: 0; font-size: 21px; }
+    header p { margin: 6px 0 0; color: #a9b5c5; font-size: 13px; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; max-width: 1440px; margin: auto; padding: 18px; }
+    section { min-width: 0; border: 1px solid #293241; border-radius: 12px; background: #151c26; padding: 16px; }
+    h2 { margin: 0 0 14px; font-size: 16px; }
+    .video-wrap { overflow: hidden; border-radius: 8px; background: #05070a; aspect-ratio: 8 / 3; display: grid; place-items: center; }
+    .video-wrap.raw-frame { aspect-ratio: 4 / 3; }
+    .video-wrap img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .video-note { color: #91a0b2; font-size: 12px; margin: 10px 0 0; }
+    .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .metric { padding: 11px; background: #1d2633; border-radius: 8px; min-width: 0; }
+    .metric span { display: block; color: #9eacbd; font-size: 12px; }
+    .metric strong { display: block; margin-top: 4px; font-size: 17px; overflow-wrap: anywhere; }
+    #message { margin: 12px 0; color: #c8d2df; font-size: 13px; min-height: 20px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .actions button { flex: 1 1 120px; }
+    .gimbal-control { margin-top: 14px; padding: 12px; border: 1px solid #303b4b; border-radius: 8px; background: #111821; }
+    .gimbal-control > summary { padding: 8px 0; cursor: pointer; font-size: 13px; font-weight: 650; }
+    .gimbal-control[open] > summary { margin-bottom: 10px; }
+    .gimbal-control-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 9px; font-size: 13px; }
+    #gimbal-readout { color: #b9c9dc; font-variant-numeric: tabular-nums; }
+    #gimbal-pad { position: relative; height: 190px; overflow: hidden; border: 1px solid #53647a; border-radius: 8px; background: linear-gradient(0deg, #182533, #111a24); touch-action: none; user-select: none; cursor: crosshair; }
+    #gimbal-pad::before, #gimbal-pad::after { content: ""; position: absolute; background: #71819855; pointer-events: none; }
+    #gimbal-pad::before { left: 0; right: 0; top: 50%; height: 1px; }
+    #gimbal-pad::after { top: 0; bottom: 0; left: 50%; width: 1px; }
+    #gimbal-pad.disabled { opacity: .5; cursor: not-allowed; }
+    #gimbal-marker { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; background: #3a91e8; box-shadow: 0 0 0 5px #3a91e844; transform: translate(-50%, -50%); pointer-events: none; }
+    .gimbal-directions { display: flex; gap: 18px; margin-top: 9px; }
+    .gimbal-directions label { display: flex; align-items: center; gap: 6px; }
+    .gimbal-directions input { width: auto; }
+    #gimbal-help { min-height: 32px; margin: 8px 0 0; color: #a9b5c5; font-size: 12px; line-height: 1.5; }
+    button { border: 0; border-radius: 8px; padding: 11px 15px; color: white; font: inherit; font-weight: 650; cursor: pointer; }
+    button:disabled { opacity: .48; cursor: wait; }
+    #start { background: #16834d; }
+    #stop { background: #b83c45; }
+    #gimbal-home { background: #315d9c; }
+    .warning { color: #e8c989; font-size: 12px; line-height: 1.5; margin: 12px 0 0; }
+    form { display: grid; gap: 14px; }
+    fieldset { border: 1px solid #303b4b; border-radius: 8px; padding: 12px; margin: 0; }
+    legend { color: #b9c9dc; padding: 0 6px; font-size: 13px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    label { display: grid; gap: 5px; font-size: 12px; color: #aab8c9; }
+    input { width: 100%; min-width: 0; border: 1px solid #394658; background: #0e141c; color: #edf3fa; border-radius: 6px; padding: 8px; font: inherit; }
+    input[type="checkbox"] { width: auto; }
+    textarea { width: 100%; min-height: 76px; resize: vertical; border: 1px solid #394658; background: #0e141c; color: #edf3fa; border-radius: 6px; padding: 8px; font: inherit; }
+    .fields .wide { grid-column: 1 / -1; }
+    .roi-title { grid-column: 1 / -1; color: #d7e0eb; font-size: 12px; margin: 2px 0 -4px; }
+    #save { background: #315d9c; }
+    #save-result { min-height: 18px; color: #9ec7a8; font-size: 12px; }
+    .offline { color: #ff9a9a !important; }
+    @media (max-width: 850px) { main { grid-template-columns: 1fr; padding: 12px; } }
+    @media (max-width: 440px) { .fields { grid-template-columns: 1fr 1fr; } section { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>视觉循迹小车 · Web 调试台</h1>
+    <p>相机画面与导航控制。进入页面时仅预览，不会自动驱动车轮。</p>
+    <nav style="margin-top:12px"><a href="/config" style="color:#92bfff">Config · 参数设置 →</a></nav>
+  </header>
+  <main>
+    <div>
+      <section>
+        <h2>实时相机与识线叠加</h2>
+        <div class="video-wrap"><img id="camera-stream" alt="相机实时画面"></div>
+        <p id="video-connection" class="video-note" role="status">画面连接中…</p>
+        <p class="video-note">左：原图、ROI、扫描候选和选中路径；中：黑色阈值二值图及扫描质量；右：地面坐标图（仅有实测标定时）。扫描线按近端黄 / 中段紫 / 远端青区分，橙色为候选区间，绿色为 VALID 路径，紫色拟合线为图像坐标结果。</p>
+      </section>
+      <section style="margin-top:16px">
+        <h2>识别与运行状态</h2>
+        <div class="actions">
+          <button id="start" type="button" disabled>启动循迹</button>
+          <button id="stop" type="button">停止电机</button>
+          <button id="gimbal-home" type="button" disabled>摄像头回预设位</button>
+        </div>
+        <label><input id="obstacle-enabled" type="checkbox" role="switch" disabled>超声波避障</label>
+        <p id="obstacle-note" class="video-note" role="status">默认关闭，正在读取设置…</p>
+        <p id="status-connection" class="video-note" role="status">状态连接中…</p>
+        <div class="status-grid">
+          <div class="metric"><span>电机命令状态（软件记录，无轮速反馈）</span><strong id="motor-output">未知</strong></div>
+          <div class="metric"><span>电池电压</span><strong id="battery-voltage">暂无数据</strong></div>
+          <div class="metric"><span>运行状态</span><strong id="state">连接中…</strong></div>
+          <div class="metric"><span>相机 / 帧率</span><strong id="camera">—</strong></div>
+          <div class="metric"><span>云台回位状态</span><strong id="gimbal-state">未启用</strong></div>
+          <div class="metric"><span>近端黑线</span><strong id="near">—</strong></div>
+          <div class="metric"><span>远端黑线</span><strong id="far">—</strong></div>
+          <div class="metric"><span>选中路径连续性</span><strong id="continuity">—</strong></div>
+          <div class="metric"><span>横向偏差</span><strong id="error">—</strong></div>
+          <div class="metric"><span>弯道预瞄输入（归一化）</span><strong id="steering-error">—</strong></div>
+          <div class="metric"><span>远 / 中 / 近候选扫描行</span><strong id="scan-zones">—</strong></div>
+          <div class="metric"><span>近端路径质量（行数 / 置信度）</span><strong id="near-quality">—</strong></div>
+          <div class="metric"><span>车头参考点横向偏差（cm，右正）</span><strong id="ground-lateral">未标定</strong></div>
+          <div class="metric"><span>最近有效观测距离（cm）</span><strong id="ground-nearest">未标定</strong></div>
+          <div class="metric"><span>车头参考点方向误差（°）</span><strong id="ground-heading">未标定</strong></div>
+          <div class="metric"><span>地面路径状态 / 外推距离</span><strong id="ground-prediction">未标定</strong></div>
+          <div class="metric"><span>方向角补偿（归一化）</span><strong id="heading-feedback">—</strong></div>
+          <div class="metric"><span>视觉转向输出（归一化）</span><strong id="visual-output">—</strong></div>
+          <div class="metric"><span>最终转向输出（归一化）</span><strong id="steering-output">—</strong></div>
+          <div class="metric"><span>拟合轨迹中点（x, y）</span><strong id="path-midpoint">—</strong></div>
+          <div class="metric"><span>前进分量占空比（命令值，无速度反馈）</span><strong id="forward-command">0.00</strong></div>
+          <div class="metric"><span>转向分量占空比（命令值，无速度反馈）</span><strong id="turn-command">0.00</strong></div>
+          <div class="metric"><span>四轮占空比请求 FL / FR / RL / RR</span><strong id="wheel-commands">0.0 / 0.0 / 0.0 / 0.0</strong></div>
+          <div class="metric"><span>前方距离</span><strong id="distance">—</strong></div>
+          <div class="metric"><span>巡线探头 1 / 2 / 3 / 4（1=低反射）</span><strong id="line-sensor">—</strong></div>
+          <div class="metric"><span>前方方向（图像角度）</span><strong id="track-heading">—</strong></div>
+          <div class="metric"><span>弯向 / 图像曲率</span><strong id="curve">—</strong></div>
+          <div class="metric"><span>弯道速度倍率（软件命令比例）</span><strong id="curve-speed">—</strong></div>
+          <div class="metric"><span>中心线拟合 RMS</span><strong id="fit-rms">—</strong></div>
+          <div class="metric"><span>IMU 模式 / 数据状态</span><strong id="imu-state">纯视觉 / 未启用</strong></div>
+          <div class="metric"><span>陀螺仪 XYZ（°/s，未减零偏）</span><strong id="imu-gyro">—</strong></div>
+          <div class="metric"><span>实际转向角速度（°/s，左正右负）</span><strong id="imu-rate">—</strong></div>
+          <div class="metric"><span>期望角速度（°/s）</span><strong id="imu-target-rate">—</strong></div>
+          <div class="metric"><span>角速度误差（°/s）</span><strong id="imu-rate-error">—</strong></div>
+          <div class="metric"><span>IMU 转向修正（归一化）</span><strong id="imu-turn-correction">—</strong></div>
+          <div class="metric"><span>短窗口相对转角（°）</span><strong id="imu-window">—</strong></div>
+          <div class="metric"><span>本段累计相对角（°，仅诊断）</span><strong id="imu-angle">—</strong></div>
+          <div class="metric"><span>IMU 数据年龄</span><strong id="imu-age">—</strong></div>
+          <div class="metric"><span>校准期加速度模长（g，尺度待核实）</span><strong id="imu-accel-norm">—</strong></div>
+          <div class="metric"><span>视觉转向趋势（归一化，左正右负）</span><strong id="visual-turn-hint">—</strong></div>
+        </div>
+        <p id="imu-note">IMU 反馈未启用。</p>
+        <p id="corner-note">直角弯：未启用</p>
+        <p id="record-note">本机测试记录：未启用</p>
+        <a id="record-download" hidden>下载本轮记录</a>
+        <p id="message">正在连接小车…</p>
+        <details id="gimbal-controls" class="gimbal-control">
+          <summary>摄像头云台自由调节（点击展开）</summary>
+          <div class="gimbal-control-head"><strong>二维云台手动拖动</strong><span id="gimbal-readout">水平 —° · 俯仰 —°</span></div>
+          <div id="gimbal-pad" role="application" aria-label="拖动控制二维云台" aria-disabled="true">
+            <span id="gimbal-marker"></span>
+          </div>
+          <div class="gimbal-directions">
+            <label><input id="reverse-pan" type="checkbox">反转水平</label>
+            <label><input id="reverse-tilt" type="checkbox">反转俯仰</label>
+          </div>
+          <p id="gimbal-help" role="status">角度按参考程序线性映射（水平偏置 +15°，俯仰偏置 0°），括号内保留 PWM 脉宽。它是命令角估算，不是舵机角度反馈。车轮未使能时可拖动；方向相反可勾选反转。</p>
+        </details>
+        <p id="calibration-note" class="warning"></p>
+      </section>
+    </div>
+
+  </main>
+  <script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "line-follow-ui-language";
+  const DEFAULT_LANGUAGE = "en";
+  const EN = {
+    // Header and navigation
+    "视觉循迹小车 · 调试台": "Vision Line-Following Car · Debug Console",
+    "视觉循迹小车 · Web 调试台": "Vision Line-Following Car · Web Console",
+    "相机画面与导航控制。进入页面时仅预览，不会自动驱动车轮。": "Camera view and navigation control. The page opens in preview only and never drives the wheels automatically.",
+    "Config · 参数设置 →": "Config · Settings →",
+    "Config · 视觉与循迹参数": "Config · Vision & Tracking Parameters",
+    "保存后应用到小车；修改参数会停车，需手动重新启动导航。": "Changes are applied to the car after saving; changing parameters stops the car and requires a manual restart of navigation.",
+    "← 返回主控制页": "← Back to Control",
+
+    // Main sections and buttons
+    "实时相机与识线叠加": "Live Camera & Line Overlay",
+    "识别与运行状态": "Recognition & Runtime Status",
+    "启动循迹": "Start Tracking",
+    "停止电机": "Stop Motors",
+    "摄像头回预设位": "Home Camera",
+    "超声波避障": "Ultrasonic Avoidance",
+    "下载本轮记录": "Download This Run",
+    "正在连接小车…": "Connecting to the car…",
+    "相机实时画面": "Live camera view",
+    "画面连接中…": "Connecting video…",
+    "画面连接已建立 · 断线自动重连": "Video connected · automatic reconnect",
+    "画面连接中断，正在自动重连；旧画面不代表当前现场。": "Video disconnected; reconnecting automatically. The old image does not represent the current scene.",
+    "页面在后台，返回后重新连接画面。": "The page is in the background; the video will reconnect when you return.",
+    "状态连接中…": "Connecting status…",
+    "状态连接中断，旧数据已失效；正在自动重连。": "Status connection lost; old data is invalid. Reconnecting automatically.",
+    "默认关闭，正在读取设置…": "Disabled by default; loading settings…",
+    "默认关闭。开启后，${preSlowCm} cm 起降速，距离 ≤ ${stopDistanceCm} cm 或测距不可用时停车。切换会停止当前行驶，设置自动保存。": "Disabled by default. When enabled, the car slows at ${preSlowCm} cm and stops at ≤ ${stopDistanceCm} cm or when distance is unavailable. Switching stops the current run and saves automatically.",
+    "默认关闭，关闭时不执行避障转弯寻线。开启后，${preSlowCm} cm 起降速，距离 ≤ ${stopDistanceCm} cm 停车、原地左转约90°后前进寻线，未找到再原地右转寻线；找到稳定黑线后继续循迹，失败则停车。切换会停车，需重新点击导航，设置自动保存。": "Disabled by default; no avoidance turn/search runs while disabled. When enabled, the car slows at ${preSlowCm} cm, stops at ≤ ${stopDistanceCm} cm, turns left about 90° and searches forward; if no line is found it turns right and searches again. A stable line hands control back to tracking; failure stops the car. Switching stops the car, requires pressing Start again, and saves automatically.",
+    "左：原图、ROI、扫描候选和选中路径；中：黑色阈值二值图及扫描质量；右：地面坐标图（仅有实测标定时）。扫描线按近端黄 / 中段紫 / 远端青区分，橙色为候选区间，绿色为 VALID 路径，紫色拟合线为图像坐标结果。": "Left: original image, ROI, scan candidates and selected path. Middle: black-threshold binary image and scan quality. Right: ground-coordinate plot (only with measured calibration). Scanlines are colored near=yellow, middle=purple, far=cyan; orange marks candidate intervals, green marks the VALID path, and the purple fit line is in image coordinates.",
+    "IMU 反馈未启用。": "IMU feedback is not enabled.",
+    "直角弯：未启用": "Right-angle turns: disabled",
+    "本机测试记录：未启用": "Onboard test recording: disabled",
+    "摄像头云台自由调节（点击展开）": "Camera gimbal free adjustment (click to expand)",
+    "二维云台手动拖动": "2-axis gimbal manual drag",
+    "拖动控制二维云台": "Drag to control the 2-axis gimbal",
+    "反转水平": "Invert pan",
+    "反转俯仰": "Invert tilt",
+    "拖动控制云台；松开鼠标或手指后停止发送。方向相反时勾选对应反转项。移动云台会使地面标定失效，需重新确认后才能启动循迹。": "Drag to control the gimbal; releasing the mouse or finger stops sending commands. Tick the matching invert option if the direction is reversed. Moving the gimbal invalidates ground calibration; reconfirm it before starting tracking.",
+    "正在拖动；靠近软限位时目标会自动限幅。机械限位未经验证，请勿长时间顶住端点。": "Dragging; the target is clamped near soft limits. Mechanical limits are unverified; do not hold against an endpoint for long.",
+    "角度按参考程序线性映射（水平偏置 +15°，俯仰偏置 0°），括号内保留 PWM 脉宽。它是命令角估算，不是舵机角度反馈。车轮未使能时可拖动；方向相反可勾选反转。": "Angles are linearly mapped from the reference program (pan offset +15°, tilt offset 0°), with PWM pulse width in parentheses. These are estimated command angles, not servo feedback. Dragging is available while the wheels are disabled; tick invert if the direction is reversed.",
+    "水平 —° · 俯仰 —°": "Pan —° · Tilt —°",
+    "已发送（无角度反馈）": "Sent (no angle feedback)",
+    "回位中": "Homing",
+    "待回位": "Awaiting home",
+    "手动位置（无角度反馈）": "Manual position (no angle feedback)",
+    "未启用": "Disabled",
+    "未就绪": "Not ready",
+    "未运行": "Not running",
+    "未知": "Unknown",
+    "未检出": "Not detected",
+    "未标定": "Uncalibrated",
+    "未通过": "Not passed",
+    "连接中…": "Connecting…",
+    "未启用/无数据": "Disabled / no data",
+    "最后命令为零（无反馈）": "Last command zero (no feedback)",
+    "非零命令 / 状态未知": "Non-zero command / state unknown",
+    "暗色候选 · 未确认": "Dim candidate · unconfirmed",
+    "准备就绪": "Ready",
+    "正常循迹": "Normal tracking",
+    "直线": "Straight",
+    "转向": "Turning",
+    "接近弯心": "Approaching corner",
+    "确认出口": "Confirming exit",
+    "确认 L 弯": "Confirming L turn",
+    "等待 L 弯": "Waiting for L turn",
+    "出口已捕获": "Exit captured",
+    "画面向右弯": "Curve to the right",
+    "画面向左弯": "Curve to the left",
+    "纯视觉 / 未启用": "Vision only / disabled",
+    "纯视觉模式，IMU 采样和反馈均未启用。": "Vision-only mode; IMU sampling and feedback are disabled.",
+    "仅观测：IMU 不修正电机输出。短窗口用于短时变化；累计角不是绝对航向。": "Observe only: the IMU does not correct motor output. The short window shows short-term change; cumulative angle is not an absolute heading.",
+    "联合控制：视觉决定方向，IMU 反馈角速度；累计角不是绝对航向。": "Combined control: vision sets direction and the IMU feeds back yaw rate; cumulative angle is not an absolute heading.",
+
+    // Runtime states
+    "正在停车": "Stopping",
+    "停车未确认": "Stop not confirmed",
+    "仅预览": "Preview only",
+    "等待黑线": "Waiting for line",
+    "确认黑线": "Acquiring line",
+    "循迹运行中": "Tracking",
+    "丢线停车": "Line lost (stopped)",
+    "障碍停车": "Obstacle stop",
+    "等待距离数据": "Waiting for distance",
+    "相机错误": "Camera error",
+    "运行错误": "Runtime error",
+    "已停止": "Stopped",
+    "需地面标定": "Ground calibration required",
+    "轨迹不确定": "Path uncertain",
+    "重新确认轨迹": "Reacquiring path",
+    "近端路径丢失停车": "Near path lost (stopped)",
+    "直角弯接近": "Corner approach",
+    "直角弯转向": "Corner turn",
+    "直角弯出口确认": "Corner exit confirm",
+    "等待弯心画面": "Waiting for corner view",
+    "直角弯退出停车": "Corner abort (stopped)",
+    "等待 IMU": "Waiting for IMU",
+    "IMU 异常": "IMU error",
+    "停车标志确认": "Stop marker confirm",
+    "接近停车标志": "Approaching stop marker",
+    "停车点对位": "Stop alignment",
+    "已到停车标志": "Stop marker reached",
+    "停车定位失败": "Stop positioning failed",
+    "控制失败": "Control failure",
+    "请求超时": "Request timeout",
+    "记录错误": "Recording error",
+    "正在记录": "Recording",
+    "本轮已保存": "Run saved",
+    "记录达到存储上限": "Recording storage limit reached",
+    "正在保存结束记录": "Saving end record",
+    "有效": "Valid",
+    "不确定": "Uncertain",
+    "丢线": "Lost",
+    "通过": "Pass",
+    "未就绪 / —": "Not ready / —",
+    "联合控制 / READY": "Combined control / READY",
+    "直角弯：等待 L 弯": "Right-angle turns: waiting for L turn",
+    "例如：[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]": "Example: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]",
+    "未连接": "Not connected",
+    "暂无数据": "No data",
+    "仅观测": "Observe only",
+    "直线": "Straight",
+    "连接失败": "Connection failed",
+    "连接失败 / 状态未知": "Connection failed / state unknown",
+    "请在实际落地高度、固定云台角度下完成标定；完成前电机保持锁止。": "Calibrate at the actual ground height with the gimbal angle fixed; motors stay locked until complete.",
+    "拖动已锁定：请确认云台已启用、服务运行中，并先停止车轮。": "Dragging is locked: confirm the gimbal is enabled, the service is running, and stop the wheels first.",
+    "PWM 目标已发送（无舵机角度反馈）；当前预设值未保存。若要设为开机预设，请进入 Config 页面填写预设并重新确认地面标定。": "PWM target sent (no servo angle feedback); the current value is not saved as a preset. To save it for startup, open Config, enter the preset, and reconfirm ground calibration.",
+    "只有地面 ROI、胶带宽度范围、扫描线空间路径及帧间确认均有效时，小车才会驱动车轮。请确认车辆位于安全测试区域，且你能立即断电。现在启动？": "The wheels drive only when the ground ROI, tape width range, scanline spatial path and inter-frame confirmation are all valid. Confirm the car is in a safe test area and that you can cut power immediately. Start now?",
+    "摄像头云台将移动到设置的 PWM 位置。请确认舵机连杆周围无手指或障碍物，且小车循迹电机未使能。继续？": "The camera gimbal will move to the configured PWM position. Confirm there are no fingers or obstacles around the servo linkage and that the tracking motors are disabled. Continue?",
+
+    // Metric labels
+    "电机命令状态（软件记录，无轮速反馈）": "Motor command state (software log, no wheel-speed feedback)",
+    "电池电压": "Battery voltage",
+    "运行状态": "Runtime state",
+    "相机 / 帧率": "Camera / FPS",
+    "云台回位状态": "Gimbal home state",
+    "近端黑线": "Near line",
+    "远端黑线": "Far line",
+    "选中路径连续性": "Selected path continuity",
+    "横向偏差": "Lateral error",
+    "弯道预瞄输入（归一化）": "Curve preview input (normalized)",
+    "远 / 中 / 近候选扫描行": "Far / mid / near candidate scanlines",
+    "近端路径质量（行数 / 置信度）": "Near path quality (rows / confidence)",
+    "车头参考点横向偏差（cm，右正）": "Front-reference lateral error (cm, right positive)",
+    "最近有效观测距离（cm）": "Nearest valid observation (cm)",
+    "车头参考点方向误差（°）": "Front-reference heading error (°)",
+    "地面路径状态 / 外推距离": "Ground path state / extrapolation",
+    "方向角补偿（归一化）": "Heading compensation (normalized)",
+    "视觉转向输出（归一化）": "Vision steering output (normalized)",
+    "最终转向输出（归一化）": "Final steering output (normalized)",
+    "拟合轨迹中点（x, y）": "Fitted path midpoint (x, y)",
+    "前进分量占空比（命令值，无速度反馈）": "Forward duty (command, no speed feedback)",
+    "转向分量占空比（命令值，无速度反馈）": "Turn duty (command, no speed feedback)",
+    "四轮占空比请求 FL / FR / RL / RR": "Wheel duty request FL / FR / RL / RR",
+    "前方距离": "Forward distance",
+    "巡线探头 1 / 2 / 3 / 4（1=低反射）": "Line sensors 1 / 2 / 3 / 4 (1=low reflection)",
+    "前方方向（图像角度）": "Forward heading (image angle)",
+    "弯向 / 图像曲率": "Turn direction / image curvature",
+    "弯道速度倍率（软件命令比例）": "Curve speed scale (software command)",
+    "中心线拟合 RMS": "Centerline fit RMS",
+    "IMU 模式 / 数据状态": "IMU mode / data state",
+    "陀螺仪 XYZ（°/s，未减零偏）": "Gyro XYZ (°/s, raw)",
+    "实际转向角速度（°/s，左正右负）": "Actual yaw rate (°/s, left positive)",
+    "期望角速度（°/s）": "Target yaw rate (°/s)",
+    "角速度误差（°/s）": "Yaw-rate error (°/s)",
+    "IMU 转向修正（归一化）": "IMU steering correction (normalized)",
+    "短窗口相对转角（°）": "Short-window relative angle (°)",
+    "本段累计相对角（°，仅诊断）": "Segment cumulative angle (°, diagnostics only)",
+    "IMU 数据年龄": "IMU data age",
+    "校准期加速度模长（g，尺度待核实）": "Calibration acceleration magnitude (g, scale unverified)",
+    "视觉转向趋势（归一化，左正右负）": "Vision turn hint (normalized, left positive)",
+
+    // Config page
+    "视觉与循迹参数": "Vision & Tracking Parameters",
+    "近端循迹与丢线保护": "Near Tracking & Line-Loss Protection",
+    "黑线识别": "Line Detection",
+    "控制参数": "Control Parameters",
+    "二维云台 PWM 回位": "2-axis Gimbal PWM Home",
+    "弯道速度控制（默认关闭）": "Curve Speed Control (disabled by default)",
+    "方向和曲率诊断（仅显示）": "Heading & Curvature Diagnostics (display only)",
+    "实际落地标定与胶带宽度范围": "Ground Calibration & Tape Width Range",
+    "调试可视化（正式运行可关闭）": "Debug Visualization (can be disabled in normal runs)",
+    "保存并应用参数": "Save & Apply",
+    "正在保存…": "Saving…",
+    "宽度": "Width",
+    "高度": "Height",
+    "平滑系数": "Smoothing factor",
+    "灰度阈值": "Grayscale threshold",
+    "请求超时": "Request timeout",
+    "基础占空比": "Base duty",
+    "扫描线数量": "Scanline count",
+    "最低置信度": "Minimum confidence",
+    "中心跳变惩罚": "Center-jump penalty",
+    "宽度变化惩罚": "Width-change penalty",
+    "帧间轨迹确认": "Inter-frame path confirmation",
+    "弯道目标倍率": "Curve target scale",
+    "最大横向斜率": "Maximum lateral slope",
+    "直线速度倍率": "Straight speed scale",
+    "稳定识线帧数": "Stable-line frames",
+    "速度倍率上限": "Speed scale upper limit",
+    "速度倍率下限": "Speed scale lower limit",
+    "最大转向占空比": "Maximum turn duty",
+    "最少有效扫描线": "Minimum valid scanlines",
+    "移动时间（秒）": "Move time (s)",
+    "稳定等待（秒）": "Settle wait (s)",
+    "丢失后不确定帧数": "Uncertain frames after loss",
+    "宽度匹配评分权重": "Width-match score weight",
+    "扫描线与路径评分": "Scanline & path scoring",
+    "扫描覆盖评分权重": "Scan-coverage score weight",
+    "相邻宽度变化容差": "Adjacent width-change tolerance",
+    "路径平滑评分权重": "Path-smoothness score weight",
+    "宽度范围外附加容差": "Extra tolerance outside width range",
+    "近端最少有效扫描线": "Minimum valid near scanlines",
+    "仅近端可见时速度倍率": "Speed scale when only near is visible",
+    "俯仰目标脉宽（μs）": "Tilt target pulse (μs)",
+    "大偏差阈值（归一化）": "Large-error threshold (normalized)",
+    "水平目标脉宽（μs）": "Pan target pulse (μs)",
+    "俯仰舵机 PWM 通道": "Tilt servo PWM channel",
+    "减速变化率（倍率/秒）": "Deceleration rate (scale/s)",
+    "加速变化率（倍率/秒）": "Acceleration rate (scale/s)",
+    "宽度样本参考值（mm）": "Tape width sample reference (mm)",
+    "服务启动时回到指定位置": "Return to preset position on service start",
+    "水平舵机 PWM 通道": "Pan servo PWM channel",
+    "允许胶带最大宽度（mm）": "Maximum tape width (mm)",
+    "允许胶带最小宽度（mm）": "Minimum tape width (mm)",
+    "直线判定阈值（px⁻¹）": "Straightness threshold (px⁻¹)",
+    "远端预瞄权重（0=关闭）": "Far preview weight (0=off)",
+    "大偏差转向增益（1=关闭）": "Large-error steering gain (1=off)",
+    "方向前馈最大贡献（归一化）": "Maximum heading-feedforward contribution (normalized)",
+    "近端连续丢失后解除使能帧数": "Frames before disarming after continuous near loss",
+    "强弯曲率标定阈值（px⁻¹）": "Strong-curvature threshold (px⁻¹)",
+    "方向前馈增益 Kθ（每弧度）": "Heading-feedforward gain Kθ (per radian)",
+    "近端 ROI（主要循迹区域）": "Near ROI (primary tracking area)",
+    "远端 ROI（辅助观察区域）": "Far ROI (auxiliary observation area)",
+    "PID 微分滤波 α（1=关闭）": "PID derivative filter α (1=off)",
+    "PID 输出平滑 α（1=关闭）": "PID output smoothing α (1=off)",
+    "最大中心变化速度（画面宽度/秒）": "Maximum center-change rate (image width/s)",
+    "启用弯道速度调节（实车标定前保持关闭）": "Enable curve speed control (keep off before vehicle calibration)",
+    "确认小车处于实际落地高度，且云台固定在循迹角度": "Confirm the car is at its actual ground height and the gimbal is fixed at the tracking angle",
+    "地面梯形 ROI 四角（归一化 [x,y]，从远端左角顺时针）": "Ground trapezoid ROI corners (normalized [x,y], clockwise from far-left)",
+    "自定义扫描线位置（0 到 1，从远端到近端；留空使用均匀分布）": "Custom scanline positions (0 to 1, far to near; leave blank for uniform spacing)",
+    "胶带宽度样本（y_norm 和 width_norm=像素宽度/图像宽度，至少远/中/近三行并覆盖 ROI 全深度）": "Tape width samples (y_norm and width_norm = pixel width / image width; at least far/mid/near and covering the full ROI depth)",
+    "远端用于预瞄；远端暂时不可见时，近端轨迹仍有效则降速跟随。近端轨迹连续无效达到设定帧数后停车并解除使能，避免线路恢复时自动重启。": "Far path is used for preview. If the far path is temporarily invisible but the near path remains valid, the car follows at reduced speed. After the configured number of consecutive invalid near frames, the car stops and disarms to avoid automatic restart when the line returns.",
+    "宽度样本按参考值标定；运行时按画面位置换算宽度区间，并按相邻扫描行估计的局部斜率修正弯道斜切造成的表观变宽。额外容差不宜设得过大。": "Width samples are calibrated against the reference. At runtime, the width interval is converted by image position and corrected for apparent widening caused by curved-tape obliquity using the local slope estimated from adjacent scanlines. Do not set the extra tolerance too large.",
+    "倍率只缩放前进分量，转向分量保留；为避免原地反转，转向量不会超过当前前进量。它不是实测车速，图像曲率阈值需用实际落地画面标定。识线不确定时仍按安全逻辑停车。": "The scale only affects the forward component; steering is preserved. To avoid in-place reversal, steering never exceeds the current forward command. This is not measured speed; the image-curvature threshold must be calibrated on the actual ground image. The car still stops under the safety logic when line detection is uncertain.",
+    "参考云台程序的俯仰软件范围为 -40° 至 +90°（-40°≈1944 μs，+90°=500 μs）；这不是机械限位反馈。请确认机构无干涉，并核对 Model A PWM 通道。未确认前保持关闭；回位按钮仅在电机未使能时可用。": "The reference gimbal program uses a tilt software range of -40° to +90° (-40°≈1944 μs, +90°=500 μs); this is not mechanical-limit feedback. Confirm there is no mechanical interference and verify the Model A PWM channels. Keep it off until confirmed; the Home button works only while the motors are disabled.",
+    "勾选后请点击下方“保存并应用参数”，确认才会生效。": "After ticking, click “Save & Apply” below for the change to take effect.",
+    "参数已保存；如果已启动，将停车并重新确认黑线。": "Parameters saved; if running, the car will stop and reacquire the line.",
+    "保存失败：${error.message}": "Save failed: ${error.message}",
+    "读取参数失败：${error.message}，正在自动重试。": "Failed to read parameters: ${error.message}; retrying automatically."
+  };
+
+  const PATTERNS = [
+    [/^状态更新：(.+) · 每秒自动读取$/, "Status: $1 · auto-refresh every second"],
+    [/^数据过期（(.+)s）$/, "Data stale ($1s)"],
+    [/^水平 (.+)（(.+) μs）· 俯仰 (.+)（(.+) μs）$/, "Pan $1 ($2 μs) · Tilt $3 ($4 μs)"],
+    [/^无法启动：(.+)$/, "Unable to start: $1"],
+    [/^云台回位失败：(.+)$/, "Gimbal homing failed: $1"],
+    [/^云台移动失败：(.+)$/, "Gimbal move failed: $1"],
+    [/^停止请求失败：(.+)$/, "Stop request failed: $1"],
+    [/^避障设置失败：(.+)$/, "Failed to update obstacle avoidance: $1"],
+    [/^读取配置失败：(.+)，正在重试。$/, "Failed to read configuration: $1; retrying."],
+    [/^停车未确认：(.+)。请立即物理断电。$/, "Stop not confirmed: $1. Physically disconnect power immediately."],
+    [/^IMU 数据不可用：(.+)。电机运动已锁定。$/, "IMU data unavailable: $1. Motor motion is locked."],
+    [/^(.+)。电机状态未知，请立即物理断电。$/, "$1. Motor state unknown; physically disconnect power immediately."],
+    [/^状态更新：(.+)$/, "Status: $1"],
+    [/^地面 ROI 与 (.+)–(.+)mm 胶带宽度范围已标定。当前仅预览，电机未使能；改变云台角度或安装高度后需重新标定。$/, "Ground ROI and tape width range $1–$2 mm are calibrated. Preview only; motors are disabled. Recalibrate after changing the gimbal angle or mounting height."],
+    [/^地面 ROI \/ 胶带宽度范围尚未标定，电机保持锁止。 /, "Ground ROI / tape width range is not calibrated; motors stay locked. "],
+    [/^小车本机记录：/, "Onboard recording: "],
+    [/^部分记录已达上限：/, "Some recordings reached their limit: "],
+    [/^左转 (.+)°$/, "Left turn $1°"],
+    [/^右转 (.+)°$/, "Right turn $1°"],
+    [/^转动过快或采样间隔异常，正在重新确认 IMU：([0-9]+)\/([0-9]+)。放稳后自动恢复数据，车辆需手动点击启动。$/, "Rotation too fast or sampling interval abnormal; revalidating IMU: $1/$2. Data recovers automatically once stable; press Start manually."],
+    [/^IMU 数据已恢复，转角积分从第 ([0-9]+) 段重新开始；累计角不包含数据中断期间的转动。正在循迹。$/, "IMU data recovered; angle integration restarts from segment $1. The cumulative angle excludes rotation during the data gap. Tracking."],
+    [/^IMU 数据已恢复，转角积分从第 ([0-9]+) 段重新开始；累计角不包含数据中断期间的转动。需要继续行驶时请手动点击启动。$/, "IMU data recovered; angle integration restarts from segment $1. The cumulative angle excludes rotation during the data gap. Press Start manually to continue driving."],
+    [/^保存失败：(.+)$/, "Save failed: $1"],
+    [/^读取参数失败：(.+)，正在自动重试。$/, "Failed to read parameters: $1; retrying automatically."],
+    [/^默认关闭，关闭时不执行避障转弯寻线。开启后，([0-9.]+) cm 起降速，距离 ≤ ([0-9.]+) cm 停车、原地左转约90°后前进寻线，未找到再原地右转寻线；找到稳定黑线后继续循迹，失败则停车。切换会停车，需重新点击导航，设置自动保存。$/, "Disabled by default; no avoidance turn/search runs while disabled. When enabled, the car slows at $1 cm and stops at distance ≤ $2 cm, turns left about 90° and searches forward; if no line is found, it turns right and searches again. A stable line hands control back to tracking; failure stops the car. Switching stops the car, requires pressing Start again, and saves automatically."]
+  ];
+
+  const PHRASES = [
+    ["未通过", "Not passed"],
+    ["未就绪", "Not ready"],
+    ["地面 ROI / 胶带宽度范围尚未标定，电机保持锁止。", "Ground ROI / tape width range is not calibrated; motors stay locked."],
+    ["空间 有效", "Spatial valid"],
+    ["空间 不确定", "Spatial uncertain"],
+    ["时序 有效", "Temporal valid"],
+    ["时序 不确定", "Temporal uncertain"],
+    ["置信度", "confidence"],
+    ["有效扫描线", "valid scanlines"],
+    ["重捕获", "reacquired"],
+    ["胶带范围", "tape range"],
+    ["近端标定像素范围", "near calibrated pixel range"],
+    ["条数据", "data rows"],
+    ["张原图", "raw images"],
+    ["无预测", "no prediction"],
+    ["联合控制", "Combined control"],
+    ["画面向左弯", "Curve to the left"],
+    ["画面向右弯", "Curve to the right"],
+    ["预览", "Preview"],
+    ["直角弯：", "Right-angle turns: "],
+    ["等待 L 弯", "waiting for L turn"],
+    ["通过", "Pass"],
+    ["未启用", "Disabled"],
+    ["未运行", "Not running"],
+    ["未连接", "Not connected"],
+    ["正在记录", "Recording"],
+    ["本轮已保存", "Run saved"],
+    ["记录错误", "Recording error"],
+    ["仅观测", "Observe only"],
+    ["直线", "Straight"],
+    ["空间 丢线", "Spatial lost"],
+    ["时序 丢线", "Temporal lost"],
+    ["启用", "Enabled"],
+    ["目标", "target"],
+    ["当前", "current"],
+    ["例如：", "Example: "],
+    ["默认关闭，", "Disabled by default. "],
+    ["开启后，", "When enabled, "],
+    ["距离 ≤ ", "distance ≤ "],
+    ["停车、", "stop, "],
+    ["状态更新：", "Status: "],
+    ["每秒自动读取", "auto-refresh every second"],
+    ["数据过期", "Data stale"],
+    ["水平", "Pan"],
+    ["俯仰", "Tilt"],
+    ["正在自动重连", "reconnecting automatically"],
+    ["旧数据已失效", "old data is invalid"],
+    ["电机未使能", "motors disabled"],
+    ["电机保持锁止", "motors stay locked"],
+    ["需重新标定", "recalibration required"],
+    ["请立即物理断电", "physically disconnect power immediately"],
+    ["未找到稳定黑线", "no stable line found"],
+    ["找到稳定黑线后继续循迹", "a stable line hands control back to tracking"],
+    ["失败则停车", "failure stops the car"],
+    ["原地左转约90°后前进寻线", "turn left about 90° and search forward"],
+    ["未找到再原地右转寻线", "if not found, turn right and search again"],
+    ["测距不可用时停车", "stop when distance is unavailable"],
+    ["起降速", "begin slowing"],
+    ["设置自动保存", "settings save automatically"],
+    ["切换会停车", "switching stops the car"],
+    ["需重新点击导航", "press Start again"],
+    ["关闭时不执行避障转弯寻线", "no avoidance turn/search runs while disabled"],
+    ["正在重试", "retrying"],
+    ["画面连接中断", "Video disconnected"],
+    ["画面连接已建立", "Video connected"],
+    ["断线自动重连", "automatic reconnect"],
+    ["旧画面不代表当前现场", "the old image does not represent the current scene"],
+    ["页面在后台，返回后重新连接画面", "The page is in the background; the video reconnects when you return"],
+    ["云台移动失败", "Gimbal move failed"],
+    ["云台回位失败", "Gimbal homing failed"],
+    ["无法启动", "Unable to start"],
+    ["停止请求失败", "Stop request failed"],
+    ["避障设置失败", "Failed to update obstacle avoidance"],
+    ["读取配置失败", "Failed to read configuration"],
+    ["停车未确认", "Stop not confirmed"],
+    ["IMU 数据不可用", "IMU data unavailable"],
+    ["电机运动已锁定", "motor motion is locked"],
+    ["电机状态未知", "motor state unknown"],
+    ["已发送", "Sent"],
+    ["无角度反馈", "no angle feedback"],
+    ["手动位置", "Manual position"],
+    ["最后命令为零", "Last command zero"],
+    ["无反馈", "no feedback"],
+    ["非零命令", "Non-zero command"],
+    ["状态未知", "state unknown"],
+    ["暗色候选", "Dim candidate"],
+    ["未确认", "unconfirmed"],
+    ["准备就绪", "Ready"],
+    ["正常循迹", "Normal tracking"],
+    ["接近弯心", "Approaching corner"],
+    ["确认出口", "Confirming exit"],
+    ["出口已捕获", "Exit captured"],
+    ["接近停车标志", "Approaching stop marker"],
+    ["已到停车标志", "Stop marker reached"],
+    ["停车定位失败", "Stop positioning failed"],
+    ["等待弯心画面", "Waiting for corner view"],
+    ["直角弯出口确认", "Corner exit confirm"],
+    ["直角弯退出停车", "Corner abort (stopped)"],
+    ["近端路径丢失停车", "Near path lost (stopped)"],
+    ["记录达到存储上限", "Recording storage limit reached"],
+    ["正在保存结束记录", "Saving end record"],
+    ["确认 L 弯", "Confirming L turn"],
+    ["退出停车", "Abort (stopped)"],
+    ["已转", "turned"],
+    ["部分记录已达上限：", "some recordings reached their limit: "],
+    ["丢弃", "dropped"],
+    ["近端估计", "near estimate"],
+    ["未标定", "Uncalibrated"],
+    ["请求超时", "Request timeout"],
+    ["左转", "left turn"],
+    ["右转", "right turn"],
+    ["转向", "Turning"],
+    ["关闭", "Off"],
+    ["未知", "Unknown"]
+  ];
+
+  let language = DEFAULT_LANGUAGE;
+  let observer = null;
+  let applying = false;
+  let titleOrigin = null;
+  const textOrigins = new WeakMap();
+  const attrOrigins = new WeakMap();
+  const ATTRS = ["placeholder", "title", "aria-label", "alt"];
+
+  function hasChinese(text) {
+    return /[\u3400-\u9fff]/.test(text);
+  }
+
+  function translate(text) {
+    if (!text || !hasChinese(text)) return text;
+    const key = text.trim();
+    if (EN[key]) return text.replace(key, EN[key]);
+    const spatial = key.match(/^空间 (有效|不确定|丢线) \/ 时序 (有效|不确定|丢线) · 置信度 ([0-9.]+) · 有效扫描线 ([0-9]+\/[0-9]+) · 重捕获 ([0-9]+) · 胶带范围 ([^·]+?) · 近端标定像素范围 ([^。]+)。 ?(.*)$/);
+    if (spatial) {
+      const state = value => value === "有效" ? "valid" : value === "不确定" ? "uncertain" : "lost";
+      return `Spatial ${state(spatial[1])} / temporal ${state(spatial[2])} · confidence ${spatial[3]} · valid scanlines ${spatial[4]} · reacquired ${spatial[5]} · tape range ${spatial[6].trim()} · near calibrated pixel range ${spatial[7].trim()}. ${spatial[8]}`;
+    }
+    const record = key.match(/^(?:小车本机记录：|Onboard recording: )(.+?) · ([0-9]+) 条数据 \/ ([0-9]+) 张原图(.*)$/);
+    if (record) {
+      const state = EN[record[1].trim()] || record[1].trim();
+      return `Onboard recording: ${state} · ${record[2]} data rows / ${record[3]} raw images${record[4]}`;
+    }
+    for (const [pattern, replacement] of PATTERNS) {
+      if (pattern.test(key)) return key.replace(pattern, replacement);
+    }
+    let out = key;
+    for (const [zh, en] of PHRASES) {
+      if (out.includes(zh)) out = out.split(zh).join(en);
+    }
+    if (out !== key) {
+      out = out.replace(/。/g, ". ").replace(/；/g, "; ").replace(/，/g, ", ");
+      out = out.replace(/\s+/g, " ").trim();
+    }
+    return out === key ? text : text.replace(key, out);
+  }
+
+  // Native dialogs bypass the DOM observer; translate their text explicitly.
+  window.__lineFollowText = function (text) {
+    return language === "en" ? translate(text) : text;
+  };
+
+  function applyTextNode(node) {
+    if (!node || !node.nodeValue || !node.nodeValue.trim()) return;
+    if (node.parentElement && node.parentElement.closest("script, style, textarea, pre, code, [data-i18n-skip]")) return;
+    if (language === "zh") {
+      const original = textOrigins.get(node);
+      if (original !== undefined && node.nodeValue !== original) node.nodeValue = original;
+      return;
+    }
+    if (!hasChinese(node.nodeValue)) return;
+    if (!textOrigins.has(node)) textOrigins.set(node, node.nodeValue);
+    const translated = translate(node.nodeValue);
+    if (translated !== node.nodeValue) node.nodeValue = translated;
+  }
+
+  function applyAttributes(element) {
+    if (!element || element.closest("script, style, [data-i18n-skip]")) return;
+    for (const attr of ATTRS) {
+      if (!element.hasAttribute(attr)) continue;
+      const value = element.getAttribute(attr);
+      if (!value || !hasChinese(value)) continue;
+      let store = attrOrigins.get(element);
+      if (!store) {
+        store = {};
+        attrOrigins.set(element, store);
+      }
+      if (language === "zh") {
+        if (store[attr] !== undefined && value !== store[attr]) element.setAttribute(attr, store[attr]);
+        continue;
+      }
+      if (store[attr] === undefined) store[attr] = value;
+      const translated = translate(value);
+      if (translated !== value) element.setAttribute(attr, translated);
+    }
+  }
+
+  function walk(root) {
+    if (!root) return;
+    if (root.nodeType === Node.TEXT_NODE) {
+      applyTextNode(root);
+      return;
+    }
+    if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+    applyAttributes(root);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    let node = walker.nextNode();
+    while (node) {
+      if (node.nodeType === Node.TEXT_NODE) applyTextNode(node);
+      else applyAttributes(node);
+      node = walker.nextNode();
+    }
+  }
+
+  function updateToggle() {
+    document.querySelectorAll("[data-language-toggle]").forEach((button) => {
+      button.textContent = language === "en" ? "Chinese" : "English";
+      button.setAttribute("aria-label", language === "en" ? "Switch to Chinese" : "Switch to English");
+      button.setAttribute("title", language === "en" ? "Switch to Chinese" : "Switch to English");
+      button.setAttribute("lang", language === "en" ? "en" : "en");
+    });
+  }
+
+  function applyLanguage(next, persist) {
+    language = next === "zh" ? "zh" : "en";
+    if (persist) localStorage.setItem(STORAGE_KEY, language);
+    document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+    applying = true;
+    if (observer) observer.disconnect();
+    if (document.title) {
+      if (language === "zh") {
+        if (titleOrigin) document.title = titleOrigin;
+      } else if (hasChinese(document.title)) {
+        if (titleOrigin === null) titleOrigin = document.title;
+        document.title = translate(titleOrigin);
+      }
+    }
+    walk(document.body);
+    updateToggle();
+    applying = false;
+    if (observer) {
+      observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+    }
+  }
+
+  function toggleLanguage() {
+    applyLanguage(language === "en" ? "zh" : "en", true);
+  }
+
+  function install() {
+    if (document.querySelector("[data-language-toggle]") === null) {
+      const holder = document.querySelector("header nav") || document.querySelector("header") || document.body;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "i18n-toggle";
+      button.setAttribute("data-language-toggle", "");
+      button.style.cssText = "margin-left:12px;padding:6px 10px;border:1px solid #3b4b61;border-radius:6px;background:#1d2a3a;color:#dce8f7;font:inherit;cursor:pointer;";
+      button.addEventListener("click", toggleLanguage);
+      holder.appendChild(button);
+    }
+    document.querySelectorAll("[data-language-toggle]").forEach((button) => {
+      if (!button.dataset.bound) {
+        button.dataset.bound = "1";
+        button.addEventListener("click", toggleLanguage);
+      }
+    });
+    const saved = localStorage.getItem(STORAGE_KEY);
+    applyLanguage(saved === "zh" ? "zh" : DEFAULT_LANGUAGE, false);
+    observer = new MutationObserver((mutations) => {
+      if (applying) return;
+      applying = true;
+      for (const mutation of mutations) {
+        if (mutation.type === "characterData") applyTextNode(mutation.target);
+        else if (mutation.type === "attributes") applyAttributes(mutation.target);
+        else {
+          for (const node of mutation.addedNodes) walk(node);
+        }
+      }
+      applying = false;
+    });
+    observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", install, { once: true });
+  } else {
+    install();
+  }
+})();
+
+  </script>
+  <script>
+    const startButton = document.querySelector('#start');
+    const stopButton = document.querySelector('#stop');
+    const gimbalHomeButton = document.querySelector('#gimbal-home');
+    const gimbalControls = document.querySelector('#gimbal-controls');
+    const gimbalPad = document.querySelector('#gimbal-pad');
+    const gimbalMarker = document.querySelector('#gimbal-marker');
+    const gimbalHelp = document.querySelector('#gimbal-help');
+    const gimbalReadout = document.querySelector('#gimbal-readout');
+    const reversePanCheckbox = document.querySelector('#reverse-pan');
+    const reverseTiltCheckbox = document.querySelector('#reverse-tilt');
+    const stateNames = {
+      STOPPING: '正在停车', MOTOR_STOP_ERROR: '停车未确认',
+      PREVIEW: '仅预览', WAITING_LINE: '等待黑线', ACQUIRING_LINE: '确认黑线',
+      TRACKING: '循迹运行中', LINE_LOST: '丢线停车', OBSTACLE_STOP: '障碍停车',
+      WAIT_DISTANCE: '等待距离数据', CAMERA_ERROR: '相机错误', ERROR: '运行错误', STOPPED: '已停止'
+    };
+    stateNames.CALIBRATION_REQUIRED = '需地面标定';
+    stateNames.UNCERTAIN = '轨迹不确定';
+    stateNames.ACQUIRING_LINE = '重新确认轨迹';
+    stateNames.END_OF_LINE = '近端路径丢失停车';
+    Object.assign(stateNames, {CORNER_APPROACH:'直角弯接近', CORNER_TURN:'直角弯转向',
+      CORNER_REACQUIRE:'直角弯出口确认', CORNER_WAIT_EVIDENCE:'等待弯心画面', CORNER_FAILED:'直角弯退出停车',
+      IMU_WAIT:'等待 IMU', IMU_ERROR:'IMU 异常'});
+    Object.assign(stateNames, {STOP_MARKER_CONFIRM:'停车标志确认', STOP_MARKER_APPROACH:'接近停车标志',
+      STOP_MARKER_ADVANCE:'停车点对位', STOP_MARKER_REACHED:'已到停车标志', STOP_MARKER_FAILED:'停车定位失败'});
+    const visionStateNames = { VALID: '有效', UNCERTAIN: '不确定', LOST: '丢线' };
+    const recordCanStart = status => !status.test_record_state || ['DISABLED', 'READY', 'COMPLETE'].includes(status.test_record_state);
+    let latestStatus = null;
+    let gimbalPointerId = null;
+    let gimbalLastPoint = null;
+    let gimbalDragTarget = null;
+    let gimbalPendingTarget = null;
+    let gimbalMoveTimer = null;
+    let gimbalMoveInFlight = false;
+    // Browser connection timings in milliseconds; no motor/control parameters.
+    const refreshConfig = Object.freeze({
+      statusPollMs: 1000, requestTimeoutMs: 3000,
+      streamRetryMs: 1500, streamRenewMs: 30000, configRetryMs: 5000
+    });
+    const cameraStream = document.querySelector('#camera-stream');
+    const videoConnection = document.querySelector('#video-connection');
+    const statusConnection = document.querySelector('#status-connection');
+    let statusPollPromise = null;
+    let statusPollTimer = null;
+    let statusRevision = 0;
+    let streamTimer = null;
+    let lastStreamSession = null;
+    let statusConnected = false;
+    const gimbalPulsePerPixel = 4;
+    const gimbalYawTrimDeg = 15;
+    const gimbalPitchTrimDeg = 0;
+
+    async function request(path, options = {}) {
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      if (options.signal?.aborted) abort();
+      options.signal?.addEventListener('abort', abort, { once: true });
+      const timeoutId = window.setTimeout(abort, refreshConfig.requestTimeoutMs);
+      try {
+        const response = await fetch(path, { cache: 'no-store', ...options, signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      } catch (error) {
+        if (controller.signal.aborted && !options.signal?.aborted) throw new Error('请求超时');
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+        options.signal?.removeEventListener('abort', abort);
+      }
+    }
+
+    function scheduleStream(delay) {
+      window.clearTimeout(streamTimer);
+      streamTimer = window.setTimeout(connectStream, delay);
+    }
+
+    function connectStream() {
+      window.clearTimeout(streamTimer);
+      if (document.hidden) return;
+      videoConnection.textContent = '画面连接中…';
+      videoConnection.classList.remove('offline');
+      // A fresh URL replaces a disconnected MJPEG request and bypasses caches.
+      cameraStream.src = `/stream.mjpg?reconnect=${Date.now()}`;
+      // A silent stream stall may leave the last image without an error event.
+      // Renew the connection periodically; this time is NOT a frame timestamp.
+      scheduleStream(refreshConfig.streamRenewMs);
+    }
+
+    cameraStream.addEventListener('load', () => {
+      videoConnection.textContent = '画面连接已建立 · 断线自动重连';
+      videoConnection.classList.remove('offline');
+    });
+    cameraStream.addEventListener('error', () => {
+      videoConnection.textContent = '画面连接中断，正在自动重连；旧画面不代表当前现场。';
+      videoConnection.classList.add('offline');
+      scheduleStream(refreshConfig.streamRetryMs);
+    });
+
+    function renderGimbalPosition(pan, tilt) {
+      const panFraction = Math.max(0, Math.min(1, (pan - 500) / 2000));
+      const tiltFraction = Math.max(0, Math.min(1, (tilt - 500) / 1444));
+      const panDegrees = Math.max(-90, Math.min(90, (pan - 500) * 180 / 2000 - 90 - gimbalYawTrimDeg));
+      const tiltDegrees = Math.max(-40, Math.min(90, 90 + gimbalPitchTrimDeg - (tilt - 500) * 180 / 2000));
+      const signedDegrees = (value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}°`;
+      gimbalMarker.style.left = `${panFraction * 100}%`;
+      gimbalMarker.style.top = `${(1 - tiltFraction) * 100}%`;
+      gimbalReadout.textContent = `水平 ${signedDegrees(panDegrees)}（${pan} μs）· 俯仰 ${signedDegrees(tiltDegrees)}（${tilt} μs）`;
+    }
+
+    function canMoveGimbal() {
+      return Boolean(
+        gimbalControls.open && latestStatus?.running && latestStatus.gimbal_enabled &&
+        !latestStatus.armed && !latestStatus.motor_active
+      );
+    }
+
+    function updateGimbalPad(status) {
+      const disabled = !status.running || !status.gimbal_enabled || status.armed || status.motor_active;
+      const manualMovePending = gimbalPointerId !== null || gimbalMoveInFlight || gimbalPendingTarget !== null;
+      gimbalPad.setAttribute('aria-disabled', String(disabled));
+      gimbalPad.classList.toggle('disabled', disabled);
+      const pan = Number(status.gimbal_pan_pulse_us ?? 1500);
+      const tilt = Number(status.gimbal_tilt_pulse_us ?? 1500);
+      if (gimbalPointerId !== null || gimbalMoveInFlight || gimbalPendingTarget !== null) {
+        const target = gimbalDragTarget || { pan_pulse_us: pan, tilt_pulse_us: tilt };
+        renderGimbalPosition(target.pan_pulse_us, target.tilt_pulse_us);
+      } else {
+        renderGimbalPosition(pan, tilt);
+      }
+      if (gimbalPointerId === null && !gimbalMoveInFlight && gimbalPendingTarget === null) {
+        gimbalHelp.textContent = disabled
+          ? '拖动已锁定：请确认云台已启用、服务运行中，并先停止车轮。'
+          : '拖动控制云台；松开鼠标或手指后停止发送。方向相反时勾选对应反转项。移动云台会使地面标定失效，需重新确认后才能启动循迹。';
+      }
+      const gimbalReady = !status.gimbal_enabled || status.gimbal_state === 'HOME_COMMAND_SENT';
+      startButton.disabled = !status.running || status.armed || !status.calibration_ready || !gimbalReady || !recordCanStart(status) || manualMovePending ||
+        (['observe', 'feedback'].includes(status.imu_mode) && !status.imu_healthy);
+      gimbalHomeButton.disabled = !status.running || status.armed || !status.gimbal_enabled ||
+        status.gimbal_state === 'MOVING' || manualMovePending;
+    }
+
+    function queueGimbalMove(target, flush = false) {
+      if (!canMoveGimbal()) return;
+      gimbalPendingTarget = target;
+      if (flush) {
+        if (gimbalMoveTimer !== null) {
+          window.clearTimeout(gimbalMoveTimer);
+          gimbalMoveTimer = null;
+        }
+        void flushGimbalMove();
+      } else if (!gimbalMoveInFlight && gimbalMoveTimer === null) {
+        gimbalMoveTimer = window.setTimeout(() => {
+          gimbalMoveTimer = null;
+          void flushGimbalMove();
+        }, 70);
+      }
+    }
+
+    async function flushGimbalMove() {
+      if (!canMoveGimbal() || gimbalMoveInFlight || gimbalPendingTarget === null) return;
+      const target = gimbalPendingTarget;
+      gimbalPendingTarget = null;
+      gimbalMoveInFlight = true;
+      try {
+        const status = await request('/api/gimbal/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        });
+        showStatus(status);
+        gimbalHelp.textContent = 'PWM 目标已发送（无舵机角度反馈）；当前预设值未保存。若要设为开机预设，请进入 Config 页面填写预设并重新确认地面标定。';
+        gimbalHelp.classList.remove('offline');
+      } catch (error) {
+        gimbalHelp.textContent = `云台移动失败：${error.message}`;
+        gimbalHelp.classList.add('offline');
+        gimbalPointerId = null;
+        gimbalPendingTarget = null;
+      } finally {
+        gimbalMoveInFlight = false;
+        if (gimbalPendingTarget !== null) {
+          gimbalMoveTimer = window.setTimeout(() => {
+            gimbalMoveTimer = null;
+            void flushGimbalMove();
+          }, 70);
+        }
+        if (latestStatus) updateGimbalPad(latestStatus);
+      }
+    }
+
+    let obstacleSaving = false;
+    const obstacleToggle = document.querySelector('#obstacle-enabled');
+
+    obstacleToggle.addEventListener('change', async () => {
+      const enabled = obstacleToggle.checked;
+      obstacleSaving = true;
+      obstacleToggle.disabled = true;
+      try {
+        await request('/api/config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ obstacle: { enabled } })
+        });
+      } catch (error) {
+        window.alert(window.__lineFollowText(`避障设置失败：${error.message}`));
+      } finally {
+        obstacleSaving = false;
+        await pollStatus();
+      }
+    });
+
+    async function loadConfig() {
+      const config = await request('/api/config');
+      const vision = config.vision;
+      document.querySelector('.video-wrap').classList.toggle('raw-frame', !vision.debug_visualization);
+      const stopDistanceCm = (config.obstacle?.stop_distance_mm ?? 250) / 10;
+      const preSlowCm = (config.obstacle?.pre_slow_distance_mm ?? 250) / 10;
+      document.querySelector('#obstacle-note').textContent =
+        config.obstacle?.bypass_enabled
+          ? `默认关闭，关闭时不执行避障转弯寻线。开启后，${preSlowCm} cm 起降速，距离 ≤ ${stopDistanceCm} cm 停车、原地左转约90°后前进寻线，未找到再原地右转寻线；找到稳定黑线后继续循迹，失败则停车。切换会停车，需重新点击导航，设置自动保存。`
+          : `默认关闭。开启后，${preSlowCm} cm 起降速，距离 ≤ ${stopDistanceCm} cm 或测距不可用时停车。切换会停止当前行驶，设置自动保存。`;
+    }
+
+    function showStatus(status) {
+      statusRevision += 1;
+      const streamSession = status.vision_capture_directory;
+      if (!statusConnected || (streamSession && lastStreamSession && streamSession !== lastStreamSession)) {
+        connectStream();
+      }
+      if (streamSession) lastStreamSession = streamSession;
+      statusConnected = true;
+      statusConnection.textContent = `状态更新：${new Date().toLocaleTimeString()} · 每秒自动读取`;
+      statusConnection.classList.remove('offline');
+      const calibrationInvalidated = latestStatus?.calibration_ready && !status.calibration_ready;
+      latestStatus = status;
+      if (!obstacleSaving) {
+        obstacleToggle.checked = Boolean(status.obstacle_enabled);
+        obstacleToggle.disabled = false;
+      }
+      const imuEnabled = ['observe', 'feedback'].includes(status.imu_mode);
+      const imuNumber = (value, digits = 2) => value == null ? '—' : Number(value).toFixed(digits);
+      document.querySelector('#imu-state').textContent = imuEnabled
+        ? `${status.imu_mode === 'feedback' ? '联合控制' : '仅观测'} / ${status.imu_state || '未知'}` : '纯视觉 / 未启用';
+      document.querySelector('#imu-gyro').textContent = Array.isArray(status.imu_gyro_dps)
+        ? status.imu_gyro_dps.map(value => imuNumber(value)).join(' / ') : '—';
+      document.querySelector('#imu-rate').textContent = imuNumber(status.imu_yaw_rate_dps);
+      document.querySelector('#imu-target-rate').textContent = imuNumber(status.target_yaw_rate_dps);
+      document.querySelector('#imu-rate-error').textContent = imuNumber(status.yaw_rate_error_dps);
+      document.querySelector('#imu-turn-correction').textContent = imuNumber(status.imu_turn_correction, 4);
+      document.querySelector('#imu-window').textContent = imuNumber(status.imu_window_yaw_deg);
+      document.querySelector('#imu-angle').textContent = imuNumber(status.imu_delta_yaw_deg);
+      document.querySelector('#imu-age').textContent = status.imu_age_s == null
+        ? '—' : `${(Number(status.imu_age_s) * 1000).toFixed(0)} ms`;
+      document.querySelector('#imu-accel-norm').textContent = imuNumber(status.imu_accel_norm_g, 3);
+      document.querySelector('#visual-turn-hint').textContent = imuNumber(status.visual_turn_hint, 3);
+      document.querySelector('#imu-note').textContent = status.imu_state === 'RECOVERING'
+        ? `转动过快或采样间隔异常，正在重新确认 IMU：${status.imu_recovery_valid_samples ?? 0}/${status.imu_recovery_required_samples ?? 10}。放稳后自动恢复数据，车辆需手动点击启动。`
+        : status.imu_error ? `IMU 数据不可用：${status.imu_error}。电机运动已锁定。`
+        : imuEnabled && status.imu_recovery_count > 0
+        ? `IMU 数据已恢复，转角积分从第 ${status.imu_recovery_count + 1} 段重新开始；累计角不包含数据中断期间的转动。${status.armed ? '正在循迹。' : '需要继续行驶时请手动点击启动。'}`
+        : status.imu_mode === 'feedback' ? '联合控制：视觉决定方向，IMU 反馈角速度；累计角不是绝对航向。'
+        : imuEnabled ? '仅观测：IMU 不修正电机输出。短窗口用于短时变化；累计角不是绝对航向。'
+        : '纯视觉模式，IMU 采样和反馈均未启用。';
+      document.querySelector('#state').textContent = stateNames[status.state] || status.state || '未知';
+      const cornerNames = {IDLE:'等待 L 弯', CONFIRM:'确认 L 弯', APPROACH:'接近弯心', TURN:'转向',
+        REACQUIRE:'确认出口', WAIT_EVIDENCE:'等待弯心画面', COMPLETE:'出口已捕获', COOLDOWN:'正常循迹', FAILED:'退出停车'};
+      document.querySelector('#corner-note').textContent = status.right_angle_enabled
+        ? `直角弯：${cornerNames[status.corner_state] || '等待 L 弯'}${status.corner_direction ? (status.corner_direction > 0 ? ' · 左转' : ' · 右转') : ''}${status.corner_progress_deg == null ? '' : ` · 已转 ${Number(status.corner_progress_deg).toFixed(1)}°`}${status.corner_reason ? ` · ${status.corner_reason}` : ''}`
+        : '直角弯：未启用';
+      const recordNames = {READY:'准备就绪', RECORDING:'正在记录', FINALIZING:'正在保存结束记录', COMPLETE:'本轮已保存',
+        DISABLED:'未启用', STOPPED:'未运行', ERROR:'记录错误', LIMIT_REACHED:'记录达到存储上限'};
+      document.querySelector('#record-note').textContent = `小车本机记录：${recordNames[status.test_record_state] || '未知'}${status.test_run_id ? ` · ${status.test_run_id}` : ''} · ${status.test_record_rows ?? 0} 条数据 / ${status.test_record_images ?? 0} 张原图${status.test_record_dropped ? ` · 丢弃 ${status.test_record_dropped}` : ''}${status.test_record_error ? ` · ${status.test_record_error}` : ''}${status.test_record_limits?.length ? ` · 部分记录已达上限：${status.test_record_limits.join(', ')}` : ''}`;
+      const recordDownload = document.querySelector('#record-download');
+      recordDownload.hidden = !status.test_run_id || status.armed || status.motor_active || status.test_record_state !== 'COMPLETE';
+      recordDownload.href = `/api/test-runs/${encodeURIComponent(status.test_run_id || '')}.tar`;
+      document.querySelector('#camera').textContent = status.camera_ok ? `${status.fps ?? '—'} FPS` : '未连接';
+      const batteryVoltage = status.battery_voltage_v;
+      const batteryAge = status.battery_voltage_age_s;
+      document.querySelector('#battery-voltage').textContent = batteryVoltage == null
+        ? (batteryAge == null ? '暂无数据' : `数据过期（${batteryAge}s）`)
+        : `${Number(batteryVoltage).toFixed(2)} V`;
+      document.querySelector('#motor-output').textContent = status.motor_active
+        ? '非零命令 / 状态未知'
+        : '最后命令为零（无反馈）';
+      const validatedPath = status.vision_state === 'VALID' && status.track_state === 'VALID' && status.line_consistent;
+      const nearCenter = status.x_near ?? (validatedPath ? status.candidate_x_near : null);
+      const farCenter = status.x_far ?? (validatedPath ? status.candidate_x_far : null);
+      const validationLabel = status.armed ? 'VALID' : 'VALID · 预览';
+      document.querySelector('#near').textContent = status.line_near
+        ? (nearCenter == null ? '暗色候选 · 未确认' : `${validationLabel} · x=${Number(nearCenter).toFixed(1)}`)
+        : '未检出';
+      document.querySelector('#far').textContent = status.line_far
+        ? (farCenter == null ? '暗色候选 · 未确认' : `${validationLabel} · x=${Number(farCenter).toFixed(1)}`)
+        : '未检出';
+      document.querySelector('#continuity').textContent = status.line_consistent ? '通过' : '未通过';
+      document.querySelector('#error').textContent = status.error == null ? '—' : Number(status.error).toFixed(3);
+      document.querySelector('#steering-error').textContent = status.steering_error == null
+        ? '—' : Number(status.steering_error).toFixed(3);
+      document.querySelector('#scan-zones').textContent =
+        `${status.far_candidate_scanlines ?? 0} / ${status.middle_candidate_scanlines ?? 0} / ${status.near_candidate_scanlines ?? 0}`;
+      document.querySelector('#near-quality').textContent =
+        `${status.near_path_scanlines ?? 0} / ${Number(status.near_path_confidence ?? 0).toFixed(2)}`;
+      const metricCm = value => value == null ? '—' : (Number(value) * 100).toFixed(2);
+      document.querySelector('#ground-lateral').textContent = metricCm(status.ground_lateral_error_m);
+      document.querySelector('#ground-nearest').textContent = metricCm(status.ground_nearest_observation_m);
+      document.querySelector('#ground-heading').textContent = status.ground_heading_error_deg == null
+        ? '—' : Number(status.ground_heading_error_deg).toFixed(2);
+      const groundState = status.ground_path_state || 'UNCERTAIN';
+      const groundExtrapolation = metricCm(status.ground_extrapolation_m);
+      document.querySelector('#ground-prediction').textContent =
+        `${groundState} · ${groundExtrapolation === '—' ? '无预测' : `${groundExtrapolation} cm`}`;
+      document.querySelector('#heading-feedback').textContent = status.heading_feedback == null
+        ? '—' : Number(status.heading_feedback).toFixed(3);
+      document.querySelector('#steering-output').textContent = status.steering_output == null
+        ? '—' : Number(status.steering_output).toFixed(3);
+      document.querySelector('#visual-output').textContent = imuNumber(status.visual_turn, 3);
+      const midpoint = status.path_midpoint_x == null || status.path_midpoint_y == null
+        ? '—' : `${status.path_midpoint_x}, ${status.path_midpoint_y}`;
+      document.querySelector('#path-midpoint').textContent = midpoint;
+      document.querySelector('#forward-command').textContent = Number(status.forward_duty_command ?? 0).toFixed(2);
+      document.querySelector('#turn-command').textContent = Number(status.turn_duty_command ?? 0).toFixed(2);
+      const wheelCommands = status.wheel_duty_commands || {};
+      document.querySelector('#wheel-commands').textContent = ['FL', 'FR', 'RL', 'RR']
+        .map(name => Number(wheelCommands[name] ?? 0).toFixed(1)).join(' / ');
+      document.querySelector('#distance').textContent = status.distance_mm == null ? '未启用/无数据' : `${status.distance_mm} mm`;
+      document.querySelector('#line-sensor').textContent = Array.isArray(status.line_sensor_channels)
+        ? status.line_sensor_channels.map(channel => channel ? '1' : '0').join(' / ')
+        : '未启用/无数据';
+      document.querySelector('#track-heading').textContent = status.track_heading_deg == null
+        ? '—' : `${Number(status.track_heading_deg).toFixed(1)}°${status.path_heading_source === 'NEAR_LINEAR' ? ' · 近端估计' : ''}`;
+      const curveNames = { UNKNOWN: '未就绪', STRAIGHT: '直线', LEFT: '画面向左弯', RIGHT: '画面向右弯' };
+      const curveValue = status.path_curvature_px_inv == null
+        ? '—' : `${Number(status.path_curvature_px_inv).toFixed(6)} px⁻¹`;
+      document.querySelector('#curve').textContent = `${curveNames[status.curve_direction] || status.curve_direction} / ${curveValue}`;
+      const speedScale = Number(status.curve_speed_scale ?? 1).toFixed(2);
+      const speedTarget = Number(status.curve_speed_target_scale ?? 1).toFixed(2);
+      document.querySelector('#curve-speed').textContent = `${status.curve_speed_enabled ? '启用' : '关闭'} · 目标 ${speedTarget}× / 当前 ${speedScale}×`;
+      document.querySelector('#fit-rms').textContent = status.path_fit_rms_px == null
+        ? '—' : `${Number(status.path_fit_rms_px).toFixed(2)} px`;
+      const gimbalStateNames = {
+        DISABLED: '未启用', NOT_HOMED: '待回位', MOVING: '回位中',
+        HOME_COMMAND_SENT: '已发送（无角度反馈）', MANUAL_POSITION: '手动位置（无角度反馈）',
+        ERROR: '控制失败'
+      };
+      document.querySelector('#gimbal-state').textContent = status.gimbal_enabled
+        ? (gimbalStateNames[status.gimbal_state] || status.gimbal_state || '状态未知')
+        : '未启用';
+      const message = document.querySelector('#message');
+      message.textContent = status.calibration_ready ? (status.message || '') : `地面 ROI / 胶带宽度范围尚未标定，电机保持锁止。 ${status.message || ''}`;
+      const visionState = visionStateNames[status.vision_state] || status.vision_state || '—';
+      const trackState = visionStateNames[status.track_state] || status.track_state || '—';
+      const expectedWidth = status.expected_width_near_min_px == null || status.expected_width_near_max_px == null
+        ? '未标定' : `${status.expected_width_near_min_px}–${status.expected_width_near_max_px}px`;
+      message.textContent = `空间 ${visionState} / 时序 ${trackState} · 置信度 ${status.confidence ?? 0} · 有效扫描线 ${status.valid_scanlines ?? 0}/${status.candidate_scanlines ?? 0} · 重捕获 ${status.reacquire_count ?? 0} · 胶带范围 ${status.tape_width_min_mm ?? '—'}–${status.tape_width_max_mm ?? '—'}mm · 近端标定像素范围 ${expectedWidth}。 ${message.textContent}`;
+      message.classList.toggle('offline', Boolean(status.motor_stop_error) || !status.running || !status.camera_ok);
+      if (status.motor_stop_error) {
+        message.textContent = `停车未确认：${status.motor_stop_error}。请立即物理断电。`;
+      }
+      document.querySelector('#calibration-note').textContent = status.calibration_ready
+        ? `地面 ROI 与 ${status.tape_width_min_mm}–${status.tape_width_max_mm}mm 胶带宽度范围已标定。当前仅预览，电机未使能；改变云台角度或安装高度后需重新标定。`
+        : '请在实际落地高度、固定云台角度下完成标定；完成前电机保持锁止。';
+      const gimbalReady = !status.gimbal_enabled || status.gimbal_state === 'HOME_COMMAND_SENT';
+      startButton.disabled = !status.running || status.armed || !status.calibration_ready || !gimbalReady || !recordCanStart(status) ||
+        (['observe', 'feedback'].includes(status.imu_mode) && !status.imu_healthy);
+      stopButton.disabled = false;
+      gimbalHomeButton.disabled = !status.running || status.armed || !status.gimbal_enabled;
+      updateGimbalPad(status);
+    }
+
+    async function pollStatus() {
+      if (statusPollPromise) return statusPollPromise;
+      window.clearTimeout(statusPollTimer);
+      const revision = statusRevision;
+      statusPollPromise = (async () => {
+      try {
+        const status = await request('/api/status');
+        // A newer Start/Stop/config response must not be replaced by an older poll.
+        if (revision === statusRevision) showStatus(status);
+      }
+      catch (error) {
+        if (revision !== statusRevision) return;
+        statusConnected = false;
+        latestStatus = null;
+        obstacleToggle.disabled = true;
+        statusConnection.textContent = '状态连接中断，旧数据已失效；正在自动重连。';
+        statusConnection.classList.add('offline');
+        startButton.disabled = true;
+        gimbalHomeButton.disabled = true;
+        gimbalPad.setAttribute('aria-disabled', 'true');
+        gimbalPad.classList.add('disabled');
+        gimbalPendingTarget = null;
+        window.clearTimeout(gimbalMoveTimer);
+        gimbalMoveTimer = null;
+        document.querySelector('#imu-state').textContent = '连接失败 / 状态未知';
+        for (const id of ['imu-gyro', 'imu-rate', 'imu-target-rate', 'imu-rate-error', 'imu-turn-correction', 'imu-window', 'imu-angle', 'imu-age', 'imu-accel-norm', 'visual-turn-hint']) {
+          document.getElementById(id).textContent = '—';
+        }
+        document.querySelector('#motor-output').textContent = '未知';
+        document.querySelector('#steering-output').textContent = '—';
+        document.querySelector('#visual-output').textContent = '—';
+        document.querySelector('#heading-feedback').textContent = '—';
+        document.querySelector('#path-midpoint').textContent = '—';
+        document.querySelector('#forward-command').textContent = '—';
+        document.querySelector('#turn-command').textContent = '—';
+        document.querySelector('#wheel-commands').textContent = '—';
+        stopButton.disabled = false;
+        document.querySelector('#state').textContent = '连接失败';
+        document.querySelector('#message').textContent = `${error.message}。电机状态未知，请立即物理断电。`;
+        document.querySelector('#message').classList.add('offline');
+      }
+      finally {
+        statusPollPromise = null;
+        statusPollTimer = window.setTimeout(pollStatus, refreshConfig.statusPollMs);
+      }
+      })();
+      return statusPollPromise;
+    }
+
+    startButton.addEventListener('click', async () => {
+      if (!window.confirm(window.__lineFollowText('只有地面 ROI、胶带宽度范围、扫描线空间路径及帧间确认均有效时，小车才会驱动车轮。请确认车辆位于安全测试区域，且你能立即断电。现在启动？'))) return;
+      startButton.disabled = true;
+      try { showStatus(await request('/api/start', { method: 'POST' })); }
+      catch (error) { window.alert(window.__lineFollowText(`无法启动：${error.message}`)); }
+      await pollStatus();
+    });
+
+    stopButton.addEventListener('click', async () => {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 2000);
+      try { showStatus(await request('/api/stop', { method: 'POST', signal: controller.signal })); }
+      catch (error) { window.alert(window.__lineFollowText(`停止请求失败：${error.message}`)); }
+      window.clearTimeout(timeoutId);
+      stopButton.disabled = false;
+      await pollStatus();
+    });
+
+    gimbalHomeButton.addEventListener('click', async () => {
+      if (!window.confirm(window.__lineFollowText('摄像头云台将移动到设置的 PWM 位置。请确认舵机连杆周围无手指或障碍物，且小车循迹电机未使能。继续？'))) return;
+      gimbalHomeButton.disabled = true;
+      try {
+        await request('/api/gimbal/home', { method: 'POST' });
+      } catch (error) {
+        window.alert(window.__lineFollowText(`云台回位失败：${error.message}`));
+      }
+      await pollStatus();
+    });
+
+    gimbalControls.addEventListener('toggle', () => {
+      if (!gimbalControls.open) {
+        const pointerId = gimbalPointerId;
+        gimbalPointerId = null;
+        gimbalLastPoint = null;
+        gimbalDragTarget = null;
+        gimbalPendingTarget = null;
+        if (gimbalMoveTimer !== null) {
+          window.clearTimeout(gimbalMoveTimer);
+          gimbalMoveTimer = null;
+        }
+        if (pointerId !== null && gimbalPad.hasPointerCapture(pointerId)) {
+          gimbalPad.releasePointerCapture(pointerId);
+        }
+      }
+      if (latestStatus) updateGimbalPad(latestStatus);
+    });
+
+    gimbalPad.addEventListener('pointerdown', (event) => {
+      if (!canMoveGimbal() || gimbalPointerId !== null || !event.isPrimary) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      gimbalPointerId = event.pointerId;
+      gimbalPad.setPointerCapture(event.pointerId);
+      gimbalLastPoint = { x: event.clientX, y: event.clientY };
+      gimbalDragTarget = {
+        pan_pulse_us: Number(latestStatus.gimbal_pan_pulse_us ?? 1500),
+        tilt_pulse_us: Number(latestStatus.gimbal_tilt_pulse_us ?? 1500)
+      };
+      gimbalHelp.textContent = '正在拖动；靠近软限位时目标会自动限幅。机械限位未经验证，请勿长时间顶住端点。';
+      gimbalHelp.classList.remove('offline');
+      updateGimbalPad(latestStatus);
+      event.preventDefault();
+    });
+
+    gimbalPad.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== gimbalPointerId || !gimbalDragTarget || !gimbalLastPoint) return;
+      const deltaX = event.clientX - gimbalLastPoint.x;
+      const deltaY = event.clientY - gimbalLastPoint.y;
+      gimbalLastPoint = { x: event.clientX, y: event.clientY };
+      const panDirection = reversePanCheckbox.checked ? -1 : 1;
+      const tiltDirection = reverseTiltCheckbox.checked ? -1 : 1;
+      gimbalDragTarget.pan_pulse_us = Math.max(500, Math.min(2500,
+        Math.round(gimbalDragTarget.pan_pulse_us + deltaX * gimbalPulsePerPixel * panDirection)));
+      gimbalDragTarget.tilt_pulse_us = Math.max(500, Math.min(1944,
+        Math.round(gimbalDragTarget.tilt_pulse_us - deltaY * gimbalPulsePerPixel * tiltDirection)));
+      renderGimbalPosition(gimbalDragTarget.pan_pulse_us, gimbalDragTarget.tilt_pulse_us);
+      queueGimbalMove({ ...gimbalDragTarget });
+      event.preventDefault();
+    });
+
+    function finishGimbalDrag(event) {
+      if (event.pointerId !== gimbalPointerId) return;
+      gimbalPointerId = null;
+      gimbalLastPoint = null;
+      if (gimbalDragTarget) queueGimbalMove({ ...gimbalDragTarget }, true);
+      if (latestStatus) updateGimbalPad(latestStatus);
+      if (gimbalPad.hasPointerCapture(event.pointerId)) gimbalPad.releasePointerCapture(event.pointerId);
+    }
+
+    gimbalPad.addEventListener('pointerup', finishGimbalDrag);
+    gimbalPad.addEventListener('pointercancel', finishGimbalDrag);
+
+    async function loadInitialConfig() {
+      try {
+        await loadConfig();
+      } catch (error) {
+        document.querySelector('#obstacle-note').textContent = `读取配置失败：${error.message}，正在重试。`;
+        window.setTimeout(loadInitialConfig, refreshConfig.configRetryMs);
+      }
+    }
+
+    function resumeConnections() {
+      if (document.hidden) return;
+      connectStream();
+      void pollStatus();
+    }
+    window.addEventListener('online', resumeConnections);
+    window.addEventListener('pageshow', resumeConnections);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        window.clearTimeout(streamTimer);
+        cameraStream.removeAttribute('src');
+        videoConnection.textContent = '页面在后台，返回后重新连接画面。';
+      } else {
+        resumeConnections();
+      }
+    });
+    void loadInitialConfig();
+    resumeConnections();
+  </script>
+</body>
+</html>

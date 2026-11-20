@@ -1,0 +1,295 @@
+{
+    "camera": {
+        "device": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+        "width": 640,
+        "height": 480,
+        "fps": 30,
+        "reconnect_interval_s": 2.0
+    },
+    "vision": {
+        "threshold": 60,
+        "blur_ksize": 5,
+        "morph_ksize": 5,
+        "reference_resolution": {
+            "width": 640,
+            "height": 480
+        },
+        "ground_roi_norm": [
+            [
+                0.04,
+                0.2296
+            ],
+            [
+                0.96,
+                0.2296
+            ],
+            [
+                0.98,
+                0.8977
+            ],
+            [
+                0.02,
+                0.8977
+            ]
+        ],
+        "tape_width_mm": 20.0,
+        "tape_width_profile": [
+            {
+                "y_norm": 0.2296,
+                "width_norm": 0.0458333333333333
+            },
+            {
+                "y_norm": 0.5637,
+                "width_norm": 0.09375
+            },
+            {
+                "y_norm": 0.8977,
+                "width_norm": 0.141666666666667
+            }
+        ],
+        "ground_calibration_confirmed": true,
+        "width_tolerance_ratio": 0.5,
+        "scanline_count": 11,
+        "scanline_positions_norm": [],
+        "min_valid_scanlines": 7,
+        "max_lateral_slope": 2.0,
+        "max_width_change_ratio": 0.8,
+        "min_confidence": 0.65,
+        "center_transition_weight": 0.3,
+        "width_transition_weight": 0.2,
+        "confidence_width_fit_weight": 0.55,
+        "confidence_smoothness_weight": 0.25,
+        "confidence_coverage_weight": 0.2,
+        "debug_visualization": true,
+        "roi_near": {
+            "x": 0,
+            "y": 320,
+            "w": 640,
+            "h": 120
+        },
+        "roi_far": {
+            "x": 0,
+            "y": 200,
+            "w": 640,
+            "h": 80
+        },
+        "tape_width_min_mm": 15.0,
+        "tape_width_max_mm": 30.0,
+        "min_near_valid_scanlines": 3
+    },
+    "control": {
+        "base_duty": 20.0,
+        "turn_duty_max": 15.0,
+        "line_acquire_frames": 3,
+        "temporal_max_center_shift_norm_per_s": 1.0,
+        "temporal_max_uncertain_frames": 2,
+        "vx_mps": 0.25,
+        "pid": {
+            "kp": 2.5,
+            "ki": 0.0,
+            "kd": 0.15,
+            "integral_limit": 0.5,
+            "output_limit": 1.0,
+            "derivative_filter_alpha": 1.0,
+            "output_smoothing_alpha": 1.0,
+            "large_error_threshold": 0.125,
+            "large_error_gain": 1.0
+        },
+        "speed_control": {
+            "enabled": true,
+            "minimum_scale": 0.6,
+            "maximum_scale": 0.75,
+            "straight_scale": 0.75,
+            "curve_scale": 0.6,
+            "full_curve_px_inv": 0.0026,
+            "acceleration_scale_per_s": 0.4,
+            "deceleration_scale_per_s": 1.0
+        },
+        "far_line_weight": 0.5,
+        "heading_gain": 1.5,
+        "heading_feedback_limit": 0.55,
+        "near_only_speed_scale": 1.0,
+        "near_lost_stop_frames": 5
+    },
+    "motor": {
+        "driver": "hiwonder_model_a",
+        "serial_device": "/dev/ttyS1",
+        "baudrate": 1000000,
+        "duty_limit": 80.0,
+        "deadzone_pct": 15.0,
+        "apply_deadzone": true,
+        "mixer": "duty",
+        "omega_to_duty": 8.0,
+        "mecanum": {
+            "wheel_radius_m": 0.03,
+            "wheelbase_x_m": 0.1,
+            "wheelbase_y_m": 0.1
+        },
+        "mapping": {
+            "rl": 3,
+            "fr": 2,
+            "fl": 1,
+            "rr": 4
+        },
+        "invert": {
+            "rl": true,
+            "fr": false,
+            "fl": true,
+            "rr": false
+        }
+    },
+    "ultrasonic": {
+        "enabled": true,
+        "type": "i2c_ultrasonic",
+        "bus": 3,
+        "address": 119
+    },
+    "line_sensor": {
+        "enabled": true,
+        "type": "i2c_line_follower",
+        "bus": 3,
+        "address": 120
+    },
+    "obstacle": {
+        "enabled": false,
+        "type": "serial_ultrasonic",
+        "serial_device": "/dev/ttyUSB0",
+        "baudrate": 9600,
+        "stop_distance_mm": 150,
+        "hard_stop_distance_mm": 60,
+        "clear_distance_mm": 180,
+        "bypass": {
+            "enabled": true,
+            "confirm_frames": 3,
+            "min_valid_distance_mm": 30,
+            "max_spread_mm": 50,
+            "pre_slow_distance_mm": 250,
+            "pre_slow_scale": 0.4,
+            "settle_s": 0.25,
+            "reverse_time_s": 0.0,
+            "reverse_scale": 0.25,
+            "reverse_timeout_s": 1.2,
+            "left_arc_deg": 90,
+            "left_arc_duty": 7.5,
+            "left_arc_speed_scale": 0.0,
+            "left_stop_lead_deg": 8,
+            "left_arc_settle_s": 0.2,
+            "left_timeout_s": 3.5,
+            "adopt_line_after_deg": 70,
+            "left_seek_distance_m": 0.06,
+            "left_seek_timeout_s": 0.8,
+            "right_arc_deg": 90,
+            "right_arc_duty": 7.5,
+            "right_arc_speed_scale": 0.0,
+            "right_stop_lead_deg": 5,
+            "right_arc_settle_s": 0.2,
+            "right_timeout_s": 3.5,
+            "right_seek_distance_m": 0.15,
+            "right_seek_timeout_s": 2.5,
+            "seek_blind_timeout_s": 0.4,
+            "seek_recover_timeout_s": 0.8,
+            "seek_recover_duty": 5.0,
+            "seek_recover_deg": 30.0,
+            "seek_speed_scale": 0.3,
+            "seek_speed_mps": 0.066667,
+            "line_confirm_frames": 3,
+            "visible_confirm_frames": 2,
+            "line_center_tolerance_norm": 0.35,
+            "line_heading_limit_deg": 45,
+            "early_adopt_deg": 20.0,
+            "early_adopt_center_norm": 0.05,
+            "capture_hold_min_deg": 45.0,
+            "capture_hold_s": 0.8,
+            "pivot_max_rate_dps": 80,
+            "max_control_gap_s": 0.6,
+            "total_timeout_s": 12,
+            "cooldown_s": 2,
+            "handover_speed_scale": 0.5,
+            "handover_slow_s": 0.5,
+            "turn_start_duty": 9.0,
+            "turn_start_window_s": 0.2
+        }
+    },
+    "path_geometry": {
+        "smoothing_alpha": 0.35,
+        "curve_threshold_px_inv": 0.0005
+    },
+    "gimbal": {
+        "enabled": true,
+        "pan_servo_id": 1,
+        "tilt_servo_id": 2,
+        "pan_pulse_us": 1388,
+        "tilt_pulse_us": 1944,
+        "move_duration_s": 1.0,
+        "settle_time_s": 0.3
+    },
+    "imu": {
+        "mode": "feedback",
+        "bus": 3,
+        "address": 104,
+        "axis": "z",
+        "positive_sign": 1,
+        "axis_verified": true,
+        "gyro_scale_lsb_per_dps": 131.0,
+        "calibration_samples": 200,
+        "filter_alpha": 0.3,
+        "sample_hz": 50.0,
+        "max_rate_dps": 220.0,
+        "max_dt_s": 0.2,
+        "stale_after_s": 0.2,
+        "window_s": 0.5,
+        "log_dir": "../../run-data/demo-vision-line-navigation/imu"
+    },
+    "vision_diagnostics": {
+        "enabled": true,
+        "sample_hz": 5.0,
+        "pre_frames": 5,
+        "post_s": 1.0,
+        "motion_rate_dps": 2.0,
+        "max_frames": 300,
+        "directory": "../../run-data/demo-vision-line-navigation/vision_diagnostics"
+    },
+    "right_angle": {
+        "enabled": true,
+        "confirm_frames": 3,
+        "min_confirm_y_norm": 0.48,
+        "trigger_y_norm": 0.65,
+        "approach_scale": 0.6,
+        "advance_duration_s": 0.5,
+        "pivot_duty": 7.5,
+        "nominal_angle_deg": 90.0,
+        "stop_lead_deg": 8.0,
+        "stop_response_s": 0.3,
+        "min_reacquire_angle_deg": 50.0,
+        "max_angle_deg": 105.0,
+        "max_rate_dps": 80.0,
+        "approach_timeout_s": 5.0,
+        "turn_timeout_s": 4.0,
+        "evidence_timeout_s": 0.25,
+        "reacquire_frames": 3,
+        "cooldown_s": 0.3,
+        "sensor_tail_duration_s": 0.1,
+        "sensor_clear_frames": 2,
+        "left_sensor_anchor_min_channels": 2,
+        "left_two_channel_tail_duration_s": 0.05,
+        "left_three_channel_tail_duration_s": 0.05,
+        "exit_max_heading_deg": 45.0,
+        "exit_max_center_offset_norm": 0.3
+    },
+    "test_recording": {
+        "enabled": true,
+        "directory": "../../run-data/demo-vision-line-navigation/runs",
+        "image_hz": 5.0,
+        "max_images": 3000,
+        "max_run_mb": 512,
+        "reserve_free_mb": 256
+    },
+    "stop_marker": {
+        "enabled": true,
+        "crossbar_m": 0.06,
+        "crossbar_tolerance_m": 0.015,
+        "sensor_forward_m": 0.08,
+        "advance_speed_mps": 0.16,
+        "approach_duty": 8.0
+    }
+}
