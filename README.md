@@ -8,7 +8,9 @@ Built on Quectel Pi M2, a Hiwonder mecanum chassis and a USB camera, this demo u
 
 ![Development board and web console](assets/demo-overview.png)
 
-**Demo video (English subtitles):** [Watch the demo](assets/demo-vision-follow-avoid-sub-en-720p.mp4)
+**Demo video (English subtitles):**
+
+https://github.com/user-attachments/assets/e35c5721-9a22-4f7a-95f6-db2f5c3f6ac0
 
 ---
 
@@ -89,7 +91,6 @@ The program listens on `0.0.0.0:8081` and keeps the vehicle in preview. Open `ht
 - [Wiring guide](docs/接线说明.md)
 - [Ground calibration tool](scripts/ground_distance_calibrate.py)
 - Main configuration: `config/demo.json` (vision, motors, IMU, L corners, avoidance and short T); `config/ground_distance_calibration.json` (image-to-ground mapping); `config/yaw_rate_feedback.json` (yaw-rate feedback).
-- [Official Quectel Pi forum](https://forumschinese.quectel.com/c/quectel-pi/58)
 
 ---
 

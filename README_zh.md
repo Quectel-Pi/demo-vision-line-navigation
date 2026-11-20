@@ -8,7 +8,9 @@
 
 ![开发板与网页界面](assets/demo-overview.png)
 
-**演示视频（英文字幕）：** [点击观看 Demo 视频](assets/demo-vision-follow-avoid-sub-en-720p.mp4)
+**演示视频（英文字幕）：**
+
+https://github.com/user-attachments/assets/e35c5721-9a22-4f7a-95f6-db2f5c3f6ac0
 
 ---
 
@@ -89,7 +91,6 @@ python3 -m line_follow_demo --config config/demo.json --host 0.0.0.0 --port 8081
 - [硬件接线说明](docs/接线说明.md)
 - [地面标定工具](scripts/ground_distance_calibrate.py)
 - 主要配置：config/demo.json（视觉、电机、IMU、L 弯、避障和短 T）；config/ground_distance_calibration.json（地面映射）；config/yaw_rate_feedback.json（角速度反馈）。
-- [Quectel Pi 官方论坛](https://forumschinese.quectel.com/c/quectel-pi/58)
 
 ---
 
