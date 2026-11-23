@@ -10,6 +10,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Original high-resolution demo video; keep only the compressed 720p copy
+/assets/demo-vision-follow-avoid-sub-en.mp4
+
 # Local evidence and development-only material
 /test_records/
 /tests/
