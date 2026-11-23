@@ -58,7 +58,7 @@ cd demo-vision-line-navigation
 # 2. Install system dependencies and add device permissions (re-login required)
 sudo apt update
 sudo apt install -y git python3 python3-pip python3-venv python3-dev i2c-tools
-sudo usermod -aG dialout,video "$USER"
+sudo usermod -aG dialout,video,i2c "$USER"
 
 # 3. Create a virtual environment and install project dependencies
 python3 -m venv .venv
@@ -70,7 +70,13 @@ python3 -m pip install -r requirements.txt
 python3 -m line_follow_demo --config config/demo.json --host 0.0.0.0 --port 8081
 ```
 
-Before the first run, set `camera.device` in `config/demo.json` to the actual camera path, and confirm that `/dev/ttyS1` and `/dev/i2c-3` exist and `i2cdetect -y 3` shows 0x68, 0x77 and 0x78. To install the preview-only background service, run `bash scripts/install_preview_autostart.sh` and `sudo loginctl enable-linger "$USER"` so the service survives logout and boot. To use a direct phone hotspot, install `dnsmasq-base` and `network-manager`, then run `sudo bash scripts/setup_phone_ap.sh`. The default hotspot is `QuectelPiM2` / `pi12345678`, and the page is `http://192.168.4.1:8081/`.
+Before the first run, set `camera.device` in `config/demo.json` to the actual camera path. Confirm that `/dev/ttyS1` and `/dev/i2c-3` exist and `/usr/sbin/i2cdetect -y 3` shows 0x68 and 0x77. The tool does not scan 0x78 by default; read the four-channel line sensor separately:
+
+```bash
+.venv/bin/python -c "from smbus2 import SMBus; bus=SMBus(3); print(hex(bus.read_byte_data(0x78, 0x01))); bus.close()"
+```
+
+A hexadecimal value means the read succeeded. To install the preview-only background service, run `bash scripts/install_preview_autostart.sh` and `sudo loginctl enable-linger "$USER"` so the service survives logout and boot. Check the page with a GET request, for example `curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/`; it should return 200. If `journalctl --user` reports insufficient permissions, check the running state with `systemctl --user status line-follow-preview.service`. To use a direct phone hotspot, install `dnsmasq-base` and `network-manager`, then run `sudo bash scripts/setup_phone_ap.sh`. The default hotspot is `QuectelPiM2` / `pi12345678`, and the page is `http://192.168.4.1:8081/`.
 
 **Run result**
 

@@ -58,7 +58,7 @@ cd demo-vision-line-navigation
 # 2. 安装系统依赖并加入设备权限组（重新登录后生效）
 sudo apt update
 sudo apt install -y git python3 python3-pip python3-venv python3-dev i2c-tools
-sudo usermod -aG dialout,video "$USER"
+sudo usermod -aG dialout,video,i2c "$USER"
 
 # 3. 创建虚拟环境并安装项目依赖
 python3 -m venv .venv
@@ -70,7 +70,13 @@ python3 -m pip install -r requirements.txt
 python3 -m line_follow_demo --config config/demo.json --host 0.0.0.0 --port 8081
 ```
 
-首次运行前，将 config/demo.json 的 camera.device 改为实际摄像头路径，并确认 /dev/ttyS1、/dev/i2c-3 存在、i2cdetect -y 3 能看到 0x68、0x77、0x78。需要后台预览自启时执行 bash scripts/install_preview_autostart.sh，并用 sudo loginctl enable-linger "$USER" 让服务在未登录时随开机启动；需要手机热点直连时先安装 dnsmasq-base 和 network-manager，再执行 sudo bash scripts/setup_phone_ap.sh。默认热点为 QuectelPiM2 / pi12345678，页面为 http://192.168.4.1:8081/。
+首次运行前，将 config/demo.json 的 camera.device 改为实际摄像头路径，并确认 /dev/ttyS1、/dev/i2c-3 存在、`/usr/sbin/i2cdetect -y 3` 能看到 0x68 和 0x77。该工具默认不扫描 0x78，四路巡线传感器需单独读取：
+
+```bash
+.venv/bin/python -c "from smbus2 import SMBus; bus=SMBus(3); print(hex(bus.read_byte_data(0x78, 0x01))); bus.close()"
+```
+
+输出十六进制数值表示读取成功。需要后台预览自启时执行 bash scripts/install_preview_autostart.sh，并用 sudo loginctl enable-linger "$USER" 让服务在未登录时随开机启动；用 GET 请求检查页面，例如 `curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/`，正常返回 200。若 `journalctl --user` 提示权限不足，先用 `systemctl --user status line-follow-preview.service` 核对运行状态。需要手机热点直连时先安装 dnsmasq-base 和 network-manager，再执行 sudo bash scripts/setup_phone_ap.sh。默认热点为 QuectelPiM2 / pi12345678，页面为 http://192.168.4.1:8081/。
 
 **运行结果**
 
