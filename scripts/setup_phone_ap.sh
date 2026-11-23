@@ -100,7 +100,8 @@ systemctl restart "$UNIT"
 systemctl is-active --quiet "$UNIT" || die 'AP DHCP did not start.'
 [[ $(nmcli -g GENERAL.CONNECTION device show "$IFACE") == "$CON_NAME" ]] || die 'AP profile is not active.'
 # The enabled user preview service must survive logout and boot without SSH.
-APP_USER=${SUDO_USER:-welton}
+APP_USER=${SUDO_USER:-}
+[[ -n $APP_USER && $APP_USER != root ]] || die 'Run with sudo from the user who will own the preview service.'
 id "$APP_USER" >/dev/null
 loginctl enable-linger "$APP_USER"
 
